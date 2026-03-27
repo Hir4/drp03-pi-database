@@ -1,0 +1,38 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: pi_postgres
+    restart: always
+    environment:
+      POSTGRES_USER: admin
+      POSTGRES_PASSWORD: adminpassword
+      POSTGRES_DB: consultoria_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./database:/docker-entrypoint-initdb.d
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U admin -d consultoria_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  dashboard:
+    build: ./dashboard
+    container_name: pi_dashboard
+    restart: always
+    ports:
+      - "8501:8501"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      - DB_HOST=db
+      - DB_PORT=5432
+      - DB_USER=admin
+      - DB_PASS=adminpassword
+      - DB_NAME=consultoria_db
+
+volumes:
+  pgdata:

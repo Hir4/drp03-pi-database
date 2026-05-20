@@ -1,38 +1,43 @@
 services:
   db:
     image: postgres:15-alpine
-    container_name: pi_postgres
+    container_name: fcn_db
     restart: always
     environment:
-      POSTGRES_USER: admin
-      POSTGRES_PASSWORD: adminpassword
-      POSTGRES_DB: consultoria_db
+      POSTGRES_USER: ${DB_USER:-fcn_admin}
+      POSTGRES_PASSWORD: ${DB_PASS:-fcn_password}
+      POSTGRES_DB: ${DB_NAME:-fcn_ti_db}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-fcn_admin} -d ${DB_NAME:-fcn_ti_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     ports:
       - "5432:5432"
     volumes:
-      - ./database:/docker-entrypoint-initdb.d
       - pgdata:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U admin -d consultoria_db"]
-      interval: 5s
-      timeout: 5s
-      retries: 10
 
-  dashboard:
-    build: ./dashboard
-    container_name: pi_dashboard
+  backend:
+    build: ./backend
+    container_name: fcn_django_backend
     restart: always
+    volumes:
+      - ./backend:/app
     ports:
-      - "8501:8501"
+      - "8000:8000"
     depends_on:
       db:
         condition: service_healthy
     environment:
-      - DB_HOST=db
-      - DB_PORT=5432
-      - DB_USER=admin
-      - DB_PASS=adminpassword
-      - DB_NAME=consultoria_db
+      DEBUG: ${DEBUG:-1}
+      SECRET_KEY: ${SECRET_KEY:-django-insecure-fcn-ti-dev-key}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS:-localhost,127.0.0.1,0.0.0.0}
+      CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS:-http://localhost:8000,http://127.0.0.1:8000}
+      DB_HOST: db
+      DB_PORT: ${DB_PORT:-5432}
+      DB_NAME: ${DB_NAME:-fcn_ti_db}
+      DB_USER: ${DB_USER:-fcn_admin}
+      DB_PASS: ${DB_PASS:-fcn_password}
 
 volumes:
   pgdata:

@@ -1,0 +1,275 @@
+{% extends "core/base.html" %}
+
+{% block title %}Projetos | FCN TI{% endblock %}
+
+{% block content %}
+{% include "core/components/hero.html" with eyebrow="Portfólio" title="Projetos ativos da operação" description="Visão resumida dos projetos, progresso das tarefas e nível de atenção exigido por cada frente." compact=True %}
+
+<section class="panel filter-panel">
+    {% include "core/components/panel_header.html" with eyebrow="Filtros" title="Refinar carteira e board operacional" %}
+    <form method="get" action="{% url 'core:projects' %}" class="filter-grid">
+        <div class="form-field">
+            <label for="filter-client">Cliente</label>
+            <select id="filter-client" name="client" class="form-control">
+                <option value="">Todos os clientes</option>
+                {% for contract in clients %}
+                    <option value="{{ contract.id }}" {% if management_filters.client == contract.id|stringformat:"s" %}selected{% endif %}>{{ contract.client_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-field">
+            <label for="filter-manager">Gerente</label>
+            <select id="filter-manager" name="manager" class="form-control">
+                <option value="">Todos os gerentes</option>
+                {% for manager in managers %}
+                    <option value="{{ manager.id }}" {% if management_filters.manager == manager.id|stringformat:"s" %}selected{% endif %}>{{ manager.get_full_name|default:manager.username }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-field">
+            <label for="filter-consultant">Consultor</label>
+            <select id="filter-consultant" name="consultant" class="form-control">
+                <option value="">Todos os consultores</option>
+                {% for consultant in consultants %}
+                    <option value="{{ consultant.id }}" {% if management_filters.consultant == consultant.id|stringformat:"s" %}selected{% endif %}>{{ consultant.get_full_name|default:consultant.username }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-field filter-checkbox-field">
+            <label class="checkbox-label">
+                <input type="checkbox" name="include_archived" value="1" {% if management_filters.include_archived == "1" %}checked{% endif %}>
+                <span>Mostrar arquivados</span>
+            </label>
+        </div>
+        <div class="filter-actions">
+            <button type="submit" class="small-button">Aplicar filtros</button>
+            <a href="{% url 'core:projects' %}" class="secondary-link">Limpar</a>
+        </div>
+    </form>
+</section>
+
+<section class="management-tools-grid">
+    <article class="panel">
+        {% include "core/components/panel_header.html" with eyebrow="Gestão ativa" title="Criar novo projeto" %}
+        <form method="post" action="{% url 'core:project_create' %}" class="timesheet-form compact-form-grid">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{% url 'core:projects' %}">
+            {% for field in project_form %}
+                <div class="form-field">
+                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.errors %}
+                        <small class="error">{{ field.errors|join:", " }}</small>
+                    {% endif %}
+                </div>
+            {% endfor %}
+            <button type="submit">Criar projeto</button>
+        </form>
+    </article>
+
+    <article class="panel">
+        {% include "core/components/panel_header.html" with eyebrow="Planejamento" title="Criar tarefa e atribuir responsável" %}
+        <form method="post" action="{% url 'core:task_create' %}" class="timesheet-form compact-form-grid">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{% url 'core:projects' %}">
+            {% for field in task_form %}
+                <div class="form-field">
+                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.errors %}
+                        <small class="error">{{ field.errors|join:", " }}</small>
+                    {% endif %}
+                </div>
+            {% endfor %}
+            <button type="submit">Criar tarefa</button>
+        </form>
+    </article>
+
+    <article class="panel">
+        {% include "core/components/panel_header.html" with eyebrow="Ajustes" title="Atualizar projeto existente" %}
+        <form method="post" action="{% url 'core:project_update' %}" class="timesheet-form compact-form-grid">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{% url 'core:projects' %}">
+            {% for field in project_update_form %}
+                <div class="form-field">
+                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.errors %}
+                        <small class="error">{{ field.errors|join:", " }}</small>
+                    {% endif %}
+                </div>
+            {% endfor %}
+            <button type="submit">Salvar projeto</button>
+        </form>
+    </article>
+
+    <article class="panel">
+        {% include "core/components/panel_header.html" with eyebrow="Replanejamento" title="Atualizar tarefa existente" %}
+        <form method="post" action="{% url 'core:task_update' %}" class="timesheet-form compact-form-grid">
+            {% csrf_token %}
+            <input type="hidden" name="next" value="{% url 'core:projects' %}">
+            {% for field in task_update_form %}
+                <div class="form-field">
+                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.errors %}
+                        <small class="error">{{ field.errors|join:", " }}</small>
+                    {% endif %}
+                </div>
+            {% endfor %}
+            <button type="submit">Salvar tarefa</button>
+        </form>
+    </article>
+</section>
+
+<section class="panel">
+    {% include "core/components/panel_header.html" with eyebrow="Carteira ativa" title="Lista consolidada de projetos" %}
+    <div class="table-wrapper">
+        <table>
+            <thead>
+                <tr>
+                    <th>Projeto</th>
+                    <th>Cliente</th>
+                    <th>Tarefas</th>
+                    <th>Concluídas</th>
+                    <th>Validação</th>
+                    <th>Progresso</th>
+                    <th>Orçamento</th>
+                    <th>Gerente</th>
+                    <th>Consultores</th>
+                    <th>Status</th>
+                    <th>Ação</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for row in projects_overview %}
+                <tr>
+                    <td data-label="Projeto">{{ row.project.name }}</td>
+                    <td data-label="Cliente">{{ row.client_name }}</td>
+                    <td data-label="Tarefas">{{ row.total_tasks }}</td>
+                    <td data-label="Concluídas">{{ row.completed_tasks }}</td>
+                    <td data-label="Validação">{{ row.pending_approval_tasks }}</td>
+                    <td data-label="Progresso">{{ row.progress }}%</td>
+                    <td data-label="Orçamento">R$ {{ row.project.budget_allocated }}</td>
+                    <td data-label="Gerente">{{ row.manager_name }}</td>
+                    <td data-label="Consultores">{{ row.consultants|join:", "|default:"Não atribuído" }}</td>
+                    <td data-label="Status"><span class="status {{ row.health|lower }}">{{ row.health }}</span></td>
+                    <td data-label="Ação">
+                        {% if row.project.is_archived %}
+                            <form method="post" action="{% url 'core:project_restore' row.project.id %}" class="inline-action-form">
+                                {% csrf_token %}
+                                <button type="submit" class="secondary-button small-button">Reativar</button>
+                            </form>
+                        {% else %}
+                            <form method="post" action="{% url 'core:project_archive' row.project.id %}" class="inline-action-form">
+                                {% csrf_token %}
+                                <button type="submit" class="secondary-button small-button">Arquivar</button>
+                            </form>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="11">Nenhum projeto disponível com os filtros atuais.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</section>
+
+<section class="panel">
+    {% include "core/components/panel_header.html" with eyebrow="Aprovação operacional" title="Tarefas aguardando validação" %}
+    <div class="list-grid">
+        {% for task in pending_task_approvals %}
+            <article class="info-card task-approval-card workflow-management-card">
+                <div class="task-approval-main">
+                    <div class="task-card-header">
+                        <div>
+                            <strong>{{ task.name }}</strong>
+                            <span>{{ task.project.name }} · {{ task.project.contract.client_name }}</span>
+                            <small>Solicitada por {{ task.completion_requested_by|default:task.assigned_to|default:"N/D" }}</small>
+                        </div>
+                        <span class="task-status pending">Em validação</span>
+                    </div>
+                    {% include "core/components/task_workflow.html" with task=task %}
+                </div>
+                <div class="task-actions">
+                    <form method="post" action="{% url 'core:task_validate_completion' task.id %}" class="inline-action-form">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{% url 'core:projects' %}">
+                        <button type="submit" class="small-button">Validar conclusão</button>
+                    </form>
+                    <form method="post" action="{% url 'core:task_reopen' task.id %}" class="inline-action-form">
+                        {% csrf_token %}
+                        <input type="hidden" name="next" value="{% url 'core:projects' %}">
+                        <button type="submit" class="secondary-button small-button">Devolver para execução</button>
+                    </form>
+                </div>
+            </article>
+        {% empty %}
+            <article class="empty-state">Nenhuma tarefa pendente de validação no momento.</article>
+        {% endfor %}
+    </div>
+</section>
+
+<section class="panel">
+    {% include "core/components/panel_header.html" with eyebrow="Execução detalhada" title="Board operacional das tarefas" %}
+    <div class="workflow-board-grid">
+        {% for task in task_board %}
+            <article class="info-card task-board-card">
+                <div class="task-card-header">
+                    <div>
+                        <strong>{{ task.name }}</strong>
+                        <span>{{ task.project.name }}</span>
+                        <small>{{ task.project.manager|default:"Sem gerente" }} · {{ task.assigned_to|default:"Não atribuído" }}</small>
+                    </div>
+                    {% if task.is_archived %}
+                        <span class="task-status archived">Arquivada</span>
+                    {% else %}
+                        <span class="task-status {{ task.status_css_class }}">{{ task.status_label }}</span>
+                    {% endif %}
+                </div>
+                {% include "core/components/task_workflow.html" with task=task %}
+                <div class="task-actions">
+                    {% if task.is_archived %}
+                        <form method="post" action="{% url 'core:task_restore' task.id %}" class="inline-action-form">
+                            {% csrf_token %}
+                            <button type="submit" class="secondary-button small-button">Reativar</button>
+                        </form>
+                    {% elif task.completion_requested_at and not task.is_completed %}
+                        <form method="post" action="{% url 'core:task_validate_completion' task.id %}" class="inline-action-form">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="{% url 'core:projects' %}">
+                            <button type="submit" class="small-button">Validar</button>
+                        </form>
+                        <form method="post" action="{% url 'core:task_reopen' task.id %}" class="inline-action-form">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="{% url 'core:projects' %}">
+                            <button type="submit" class="secondary-button small-button">Devolver</button>
+                        </form>
+                    {% elif task.is_completed %}
+                        <form method="post" action="{% url 'core:task_reopen' task.id %}" class="inline-action-form">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="{% url 'core:projects' %}">
+                            <button type="submit" class="secondary-button small-button">Reabrir</button>
+                        </form>
+                        <form method="post" action="{% url 'core:task_archive' task.id %}" class="inline-action-form">
+                            {% csrf_token %}
+                            <button type="submit" class="secondary-button small-button">Arquivar</button>
+                        </form>
+                    {% else %}
+                        <span class="muted-text">Aguardando o responsável solicitar validação.</span>
+                        <form method="post" action="{% url 'core:task_archive' task.id %}" class="inline-action-form">
+                            {% csrf_token %}
+                            <button type="submit" class="secondary-button small-button">Arquivar</button>
+                        </form>
+                    {% endif %}
+                </div>
+            </article>
+        {% empty %}
+            <article class="empty-state">Nenhuma tarefa encontrada.</article>
+        {% endfor %}
+    </div>
+</section>
+{% endblock %}

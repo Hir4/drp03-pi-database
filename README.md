@@ -1,329 +1,329 @@
-# drp03-pi-database
+# FCN TI | Plataforma de Gestão Integrada
 
-Este projeto cria um ambiente simples para simular um banco de dados de uma consultoria de TI.
+Este repositório contém o MVP acadêmico da plataforma da FCN TI, pensado para centralizar dados de operação, projetos, contratos, equipe técnica e lançamentos de horas em um único sistema.
 
-Ele foi pensado para trabalho acadêmico e demonstra, de forma visual, como:
+A ideia principal é substituir controles espalhados em planilhas por uma aplicação mais organizada, com dados consistentes, métricas em tempo real e uma base clara para evolução futura.
 
-- um banco PostgreSQL pode ser criado automaticamente;
-- tabelas podem ser montadas com SQL;
-- dados de exemplo podem ser inseridos automaticamente;
-- um dashboard pode ler esses dados e exibir gráficos.
+Hoje o projeto já entrega:
 
-O projeto usa Docker para deixar tudo mais fácil. Isso significa que você não precisa instalar PostgreSQL manualmente no seu computador para testar o banco.
+- backend funcional em Django;
+- banco PostgreSQL isolado em container próprio;
+- autenticação inicial com tela de login;
+- dashboard com indicadores de projetos;
+- formulário de registro de horas;
+- carga automática de dados de demonstração;
+- testes automatizados iniciais.
 
-## O que existe neste repositório
+Os mocks já incluem cenários mais próximos da operação real, como ex-funcionário inativo com histórico preservado, projeto crítico por consumo acima do orçamento, projeto cancelado/arquivado e tarefa momentaneamente sem responsável.
 
-### `docker-compose.yml`
+## O que este sistema resolve
 
-Este arquivo liga todos os serviços do projeto.
+Na prática, a aplicação foi desenhada para apoiar uma consultoria de TI que precisa:
 
-Ele sobe dois containers:
+- controlar usuários e seus papéis dentro da operação;
+- registrar competências técnicas da equipe;
+- organizar contratos e projetos por cliente;
+- quebrar projetos em tarefas;
+- registrar horas trabalhadas;
+- acompanhar faturamento, consumo de orçamento e margem.
 
-- `db`: o banco de dados PostgreSQL;
-- `dashboard`: a interface visual feita com Streamlit.
+Em vez de tratar essas informações de forma separada, o sistema concentra tudo em um fluxo único.
 
-### Pasta `database/`
+## Tecnologias utilizadas
 
-Essa pasta guarda os scripts SQL usados para preparar o banco.
+O projeto segue a stack definida na especificação:
 
-- `01_init.sql`: cria as tabelas;
-- `02_mock_data.sql`: insere dados de exemplo.
+- Backend: Python 3.11 + Django;
+- Banco de dados: PostgreSQL 15;
+- Infraestrutura: Docker e Docker Compose;
+- Frontend futuro: HTML5 + CSS3 puros.
 
-### Pasta `dashboard/`
+## Estrutura do repositório
 
-Essa pasta guarda a aplicação visual.
+Os diretórios e arquivos principais são:
 
-- `app.py`: busca os dados no banco e mostra indicadores, tabela e graficos;
-- `requirements.txt`: lista as bibliotecas Python usadas;
-- `Dockerfile`: define como o container do dashboard sera montado.
+- [backend](backend): aplicação Django com models, views, serviços, templates, admin, migrações e seed de dados;
+- [tests](tests): testes automatizados da aplicação;
+- [docker-compose.yml](docker-compose.yml): composição dos serviços `backend` e `db`;
+- [.env.example](.env.example): configuração padrão de ambiente local;
 
-## Como o projeto funciona
+## Como o sistema funciona
 
-Quando você executa o comando para subir o projeto, o Docker faz o seguinte:
+O ambiente sobe dois serviços separados:
 
-1. baixa ou usa a imagem do PostgreSQL;
-2. cria o banco chamado `consultoria_db`;
-3. executa os arquivos SQL da pasta `database/` na primeira inicialização;
-4. monta o dashboard em outro container;
-5. conecta o dashboard ao banco e mostra os dados no navegador.
+- `db`: container do PostgreSQL, responsável por armazenar os dados;
+- `backend`: container do Django, responsável pela aplicação web.
 
-Na prática, o fluxo fica assim:
+Quando o backend inicia, ele executa automaticamente:
 
-1. o PostgreSQL inicia;
-2. o banco cria as tabelas `clients`, `users`, `categories` e `tickets`;
-3. os dados ficticios sao inseridos;
-4. o dashboard consulta essas tabelas;
-5. você acessa a interface pelo navegador.
+1. as migrações do Django para criar e atualizar a estrutura do banco;
+2. o seed com dados de demonstração;
+3. o servidor web da aplicação.
 
-## Estrutura do banco
+Essa abordagem evita conflito entre modelagem, banco e dados de apresentação, porque existe uma única fonte de verdade:
 
-O banco possui 4 tabelas principais:
+- estrutura do banco: migrações do Django;
+- dados mockados: [backend/core/management/commands/seed_demo_data.py](backend/core/management/commands/seed_demo_data.py).
 
-- `clients`: empresas clientes;
-- `users`: equipe interna de TI;
-- `categories`: tipos de chamados;
-- `tickets`: chamados de suporte.
+## Fluxo de acesso atual
 
-### Relacionamento entre as tabelas
+Agora a rota inicial do sistema faz mais sentido para uso real:
 
-- cada chamado (`tickets`) pertence a um cliente;
-- cada chamado possui um responsável da equipe;
-- cada chamado pertence a uma categoria.
+- ao acessar a raiz da aplicação, o usuário é levado para a tela de login;
+- depois do login, o sistema redireciona para o dashboard;
+- as páginas principais ficam protegidas por autenticação.
 
-Em termos simples:
+Esse comportamento é mais coerente para um sistema interno e já prepara o projeto para evoluir regras de permissão por perfil.
 
-- `clients` diz quem abriu o problema;
-- `users` diz quem vai atender;
-- `categories` diz que tipo de problema e;
-- `tickets` guarda o registro do chamado.
+## Perfis de usuário
 
-## O que aparece no dashboard
+O sistema trabalha com três papéis principais:
 
-Ao abrir o dashboard, você vera:
+### Administrador
 
-- total de chamados;
-- quantidade de chamados abertos ou em andamento;
-- quantidade de chamados resolvidos;
-- gráfico por status;
-- gráfico por categoria e prioridade;
-- tabela com os chamados mais recentes.
+Perfil com maior nível de acesso.
 
-## Requisitos
+Responsabilidades esperadas:
+
+- administrar usuários;
+- administrar contratos, projetos, tarefas e skills;
+- acessar o painel administrativo do Django;
+- apoiar manutenção e gestão geral do sistema.
+
+No estado atual do MVP, o administrador é o perfil que já tem acesso ao admin do Django.
+
+### Gerente de Projetos
+
+Perfil voltado ao acompanhamento operacional e gerencial.
+
+Responsabilidades esperadas:
+
+- criar projetos dentro dos contratos ativos;
+- ajustar nome e orçamento dos projetos em andamento;
+- cadastrar tarefas e atribuir responsáveis da equipe técnica;
+- replanejar tarefas trocando responsável e horas estimadas;
+- filtrar a carteira por cliente, gerente e consultor;
+- arquivar e reativar projetos e tarefas sem excluir histórico;
+- acompanhar indicadores do dashboard;
+- analisar a saúde dos projetos;
+- validar entregas sinalizadas pela equipe e reabrir quando necessário;
+- acompanhar contratos, tarefas e esforço registrado;
+- apoiar decisões sobre orçamento e produtividade.
+
+### Consultor Técnico
+
+Perfil voltado à execução operacional.
+
+Responsabilidades esperadas:
+
+- registrar horas trabalhadas;
+- consultar tarefas atribuídas;
+- alimentar o sistema com dados que impactam os indicadores.
+
+### Observação importante sobre permissões
+
+Os papéis já existem no modelo de dados e no login, mas a segregação fina de telas e ações por perfil ainda será expandida nas próximas etapas.
+
+Hoje o projeto já possui:
+
+- autenticação obrigatória para acessar o conteúdo principal;
+- fluxo operacional de conclusão de tarefas com solicitação do consultor e validação da gestão;
+- criação de projeto e tarefa pela própria área de gestão;
+- acesso ao admin para usuários com permissão de staff.
+
+## Pré-requisitos
+
+O jeito mais fácil de rodar o projeto localmente é usando Docker.
 
 Você precisa ter instalado:
 
+- Git;
 - Docker;
 - Docker Compose.
 
-Observação importante:
+Se estiver usando versões recentes do Docker, o Compose normalmente já vem integrado no comando `docker compose`.
 
-- em versões mais novas, o Compose ja vem integrado ao Docker e o comando usado e `docker compose`;
-- em instalações mais antigas, o comando pode ser `docker-compose`.
+## Instalação de pré-requisitos
 
-Este README vai usar `docker compose`, que e o formato mais atual.
+### Windows
 
-## Tutorial para Linux
+O caminho mais simples é:
 
-### 1. Instale o Docker
+1. instalar o Git for Windows;
+2. instalar o Docker Desktop;
+3. garantir que o WSL2 esteja habilitado, se o Docker solicitar;
+4. reiniciar a máquina, se necessário.
 
-Se o Docker ainda não estiver instalado, instale primeiro.
+Depois disso, abra:
 
-Em distribuições baseadas em Ubuntu, normalmente o processo começa assim:
+- PowerShell;
+- Prompt de Comando; ou
+- terminal do VS Code.
+
+Para validar a instalação, rode:
+
+```powershell
+git --version
+docker --version
+docker compose version
+```
+
+### Linux
+
+Em distribuições baseadas em Ubuntu/Debian, o caminho mais comum é:
 
 ```bash
 sudo apt update
-sudo apt install docker.io docker-compose-plugin
-```
-
-Depois, inicie o Docker:
-
-```bash
+sudo apt install git docker.io docker-compose-plugin
 sudo systemctl enable --now docker
 ```
 
-Para verificar se deu certo:
+Depois valide:
 
 ```bash
+git --version
 docker --version
 docker compose version
 ```
 
-Se aparecer a versão dos dois comandos, esta tudo certo.
+Se quiser rodar Docker sem `sudo`, normalmente também é recomendado adicionar seu usuário ao grupo `docker`.
 
-### 2. Entre na pasta do projeto
+## Como subir o projeto localmente em poucos passos
 
-Abra o terminal e va ate a pasta do repositório:
+### Passo 1. Clonar o repositório
 
 ```bash
-cd /caminho/para/drp03-pi-database
+git clone <url-do-repositorio>
+cd drp03-pi-database
 ```
 
-### 3. Suba o projeto
+### Passo 2. Criar o arquivo de ambiente
 
-Execute:
+```bash
+cp .env.example .env
+```
+
+No Windows, se estiver usando PowerShell, você pode copiar o arquivo manualmente pelo Explorer ou usar:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+### Passo 3. Subir a aplicação
 
 ```bash
 docker compose up --build
 ```
 
-Esse comando:
+Na primeira execução pode demorar um pouco mais, porque as imagens e dependências precisam ser preparadas.
 
-- monta o dashboard;
-- cria o banco;
-- executa os scripts SQL;
-- deixa tudo rodando.
+### Passo 4. Acessar o sistema
 
-Na primeira execução, pode demorar um pouco mais.
+Quando tudo terminar de subir, use:
 
-### 4. Acesse o dashboard
+- login da aplicação: http://localhost:8000/
+- dashboard: http://localhost:8000/dashboard/
+- registro de horas: http://localhost:8000/timesheet/
+- admin Django: http://localhost:8000/admin/
 
-Quando o processo terminar de subir, abra o navegador e entre em:
-
-```text
-http://localhost:8501
-```
-
-### 5. Parar o projeto
-
-Para encerrar, volte ao terminal onde o projeto esta rodando e pressione:
-
-```text
-Ctrl + C
-```
-
-Depois, se quiser garantir que os containers foram encerrados:
+## Como parar o projeto
 
 ```bash
 docker compose down
 ```
 
-## Tutorial para Windows
+## Como recriar o ambiente do zero
 
-### 1. Instale o Docker Desktop
-
-No Windows, a forma mais simples é instalar o Docker Desktop.
-
-Passos gerais:
-
-1. acesse o site oficial do Docker;
-2. baixe o Docker Desktop;
-3. instale normalmente;
-4. reinicie o computador se o instalador pedir;
-5. abra o Docker Desktop e espere ele ficar ativo.
-
-Para testar, abra o PowerShell ou Prompt de Comando e execute:
-
-```powershell
-docker --version
-docker compose version
-```
-
-### 2. Abra a pasta do projeto
-
-Você pode fazer isso de duas formas:
-
-1. pelo Explorador de Arquivos, abrindo a pasta do projeto;
-2. pelo terminal, entrando na pasta com `cd`.
-
-Exemplo no PowerShell:
-
-```powershell
-cd C:\caminho\para\drp03-pi-database
-```
-
-### 3. Suba o projeto
-
-Execute:
-
-```powershell
-docker compose up --build
-```
-
-Espere alguns segundos ou minutos, principalmente na primeira vez.
-
-### 4. Acesse o dashboard
-
-Abra o navegador e acesse:
-
-```text
-http://localhost:8501
-```
-
-### 5. Parar o projeto
-
-No terminal onde o projeto estiver rodando, pressione:
-
-```text
-Ctrl + C
-```
-
-Se quiser remover os containers em seguida:
-
-```powershell
-docker compose down
-```
-
-## Como recriar o banco do zero
-
-Isso e importante para quem esta testando.
-
-Os arquivos SQL da pasta `database/` sao executados apenas na primeira criação do banco. Isso acontece porque os dados ficam salvos em um volume Docker.
-
-Se você alterar os scripts SQL e quiser recriar tudo do zero, use:
+Se quiser apagar o volume do banco e reconstruir tudo:
 
 ```bash
 docker compose down -v
 docker compose up --build
 ```
 
-O comando `down -v` apaga tambem o volume onde os dados do PostgreSQL ficaram guardados.
+Isso é útil quando você quer reiniciar a base com os dados mockados desde o começo.
 
-## Dados de acesso e portas
+## Credenciais de desenvolvimento
 
 ### Banco PostgreSQL
 
-- host: `localhost`
-- porta: `5432`
-- usuario: `admin`
-- senha: `adminpassword`
-- banco: `consultoria_db`
+- banco: `fcn_ti_db`
+- usuário: `fcn_admin`
+- senha: `fcn_password`
 
-### Dashboard
+### Usuários de demonstração
 
-- endereco: `http://localhost:8501`
+- administrador: `admin` / `admin123`
+- gerente: `marina.pm` / `manager123`
+- gerente: `rodrigo.ops` / `manager123`
+- consultor: `caio.devops` / `consultant123`
+- consultora: `julia.data` / `consultant123`
+- consultor: `bruno.backend` / `consultant123`
+- consultora: `renata.qa` / `consultant123`
+- consultora: `larissa.bi` / `consultant123`
 
-## Possiveis problemas comuns
+## Como rodar os testes
 
-### A porta 5432 ou 8501 ja esta em uso
+O projeto já possui uma suíte inicial de testes cobrindo:
 
-Isso significa que outro programa ja esta usando essa porta.
+- métricas de negócio do dashboard;
+- rotas principais da aplicação;
+- fluxo de autenticação inicial.
 
-Possiveis solucoes:
+### Executando com ambiente virtual ativo
 
-- fechar o programa que esta usando a porta;
-- alterar a porta no arquivo `docker-compose.yml`.
-
-### O dashboard abriu, mas nao mostrou dados
-
-Espere alguns segundos e atualize a pagina. O banco pode ainda estar finalizando a inicialização.
-
-### Alterei os arquivos SQL e nada mudou
-
-Isso normalmente acontece porque o volume antigo do PostgreSQL ainda existe.
-
-Use:
+Se você estiver com o ambiente virtual ativado, rode:
 
 ```bash
-docker compose down -v
-docker compose up --build
+python backend/manage.py test tests --settings=config.test_settings
 ```
 
-## Resumo rapido
+### Executando com caminho explícito do Python do ambiente virtual
 
-Se você quer apenas testar rapidamente, o essencial e:
+Se preferir usar o executável diretamente:
 
 ```bash
-docker compose up --build
+.venv/bin/python backend/manage.py test tests --settings=config.test_settings
 ```
 
-Depois abra:
+No Windows, o equivalente costuma ser algo como:
 
-```text
-http://localhost:8501
+```powershell
+.venv\Scripts\python.exe backend\manage.py test tests --settings=config.test_settings
 ```
 
-Se quiser apagar tudo e recriar do zero:
+## Arquivos mais importantes para entender o projeto
 
-```bash
-docker compose down -v
-docker compose up --build
-```
+Se você estiver chegando agora, vale começar por estes pontos:
 
-## Objetivo academico do projeto
+- [backend/core/models.py](backend/core/models.py): entidades principais do domínio;
+- [backend/core/services.py](backend/core/services.py): regras de negócio e cálculos analíticos;
+- [backend/core/views.py](backend/core/views.py): fluxo de entrada, dashboard e registro de horas;
+- [backend/core/urls.py](backend/core/urls.py): rotas principais do app;
+- [backend/core/management/commands/seed_demo_data.py](backend/core/management/commands/seed_demo_data.py): dados de demonstração;
+- [backend/config/settings.py](backend/config/settings.py): configuração principal da aplicação;
+- [backend/config/test_settings.py](backend/config/test_settings.py): configuração de testes.
 
-Este repositório serve como exemplo simples de:
+## Estado atual do MVP
 
-- modelagem basica de banco relacional;
-- carga inicial de dados ficticios;
-- integracao entre banco de dados e interface visual;
-- uso de containers para facilitar testes e apresentações.
+Hoje o projeto já possui:
+
+- backend Django funcional;
+- PostgreSQL rodando em container separado;
+- autenticação inicial com login como rota padrão;
+- dashboard inicial com métricas analíticas;
+- formulário de lançamento de horas;
+- seed automático de dados de apresentação;
+- testes automatizados iniciais.
+
+## Resumo final
+
+Se a sua intenção é apenas subir o projeto sem complicação, o caminho mais simples é:
+
+1. instalar Git + Docker;
+2. clonar o repositório;
+3. copiar `.env.example` para `.env`;
+4. rodar `docker compose up --build`;
+5. abrir `http://localhost:8000/` e entrar com um usuário de demonstração.
+
+Esse fluxo já deve ser suficiente para apresentar o software localmente sem dificuldade.

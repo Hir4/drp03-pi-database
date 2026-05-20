@@ -1,0 +1,51 @@
+{% extends "core/base.html" %}
+
+{% block title %}Registro de Horas | FCN TI{% endblock %}
+
+{% block content %}
+{% include "core/components/hero.html" with eyebrow="Execução operacional" title="Registrar horas do projeto" description="Lance esforço executado, detalhe o escopo técnico e mantenha os indicadores da operação atualizados." compact=True %}
+
+<section class="panel split-layout">
+    <div>
+        <p class="eyebrow">Preenchimento rápido</p>
+        <h2>Lançamento individual</h2>
+        <p>
+            {% if is_consultant %}
+                Seu usuário já está vinculado automaticamente ao lançamento. Basta escolher uma tarefa atribuída, informar as horas e descrever a atividade.
+            {% else %}
+                Use o formulário abaixo para registrar esforço com data, tarefa, faturamento e descrição técnica.
+            {% endif %}
+        </p>
+        <form method="post" class="timesheet-form">
+            {% csrf_token %}
+            {% for field in form %}
+                <div class="form-field">
+                    {% if field.widget_type != 'hidden' %}
+                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {% endif %}
+                    {{ field }}
+                    {% if field.errors %}
+                        <small class="error">{{ field.errors|join:", " }}</small>
+                    {% endif %}
+                </div>
+            {% endfor %}
+            <button type="submit">Salvar lançamento</button>
+        </form>
+    </div>
+    <aside class="side-panel">
+        <h3>{% if is_consultant %}Seus últimos lançamentos{% else %}Últimos lançamentos{% endif %}</h3>
+        <p class="side-text">Os registros mais recentes ajudam a validar rapidamente o que já entrou na base.</p>
+        <ul class="entry-list">
+            {% for entry in recent_entries %}
+                <li>
+                    <strong>{{ entry.user }}</strong>
+                    <span>{{ entry.task.project.name }} · {{ entry.task.name }}</span>
+                    <span>{{ entry.date }} · {{ entry.hours_worked }}h</span>
+                </li>
+            {% empty %}
+                <li>Nenhum lançamento encontrado.</li>
+            {% endfor %}
+        </ul>
+    </aside>
+</section>
+{% endblock %}

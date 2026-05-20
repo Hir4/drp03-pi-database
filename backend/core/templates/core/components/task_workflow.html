@@ -1,0 +1,48 @@
+<section class="workflow-shell">
+    <div class="workflow-track">
+        <article class="workflow-step done">
+            <span class="workflow-marker"></span>
+            <div>
+                <strong>Em execução</strong>
+                <small>Responsável trabalhando na entrega</small>
+            </div>
+        </article>
+        <article class="workflow-step {% if task.completion_requested_at or task.is_completed %}done{% else %}waiting{% endif %}">
+            <span class="workflow-marker"></span>
+            <div>
+                <strong>Em validação</strong>
+                <small>
+                    {% if task.completion_requested_at %}
+                        Solicitação enviada para revisão
+                    {% else %}
+                        Aguardando solicitação de conclusão
+                    {% endif %}
+                </small>
+            </div>
+        </article>
+        <article class="workflow-step {% if task.is_completed %}done{% else %}waiting{% endif %}">
+            <span class="workflow-marker"></span>
+            <div>
+                <strong>Concluída</strong>
+                <small>
+                    {% if task.is_completed %}
+                        Entrega validada pela gestão
+                    {% else %}
+                        Ainda não validada
+                    {% endif %}
+                </small>
+            </div>
+        </article>
+    </div>
+
+    <div class="workflow-meta">
+        <span><strong>Status:</strong> {{ task.status_label }}</span>
+        {% if task.assigned_to %}<span><strong>Responsável:</strong> {{ task.assigned_to }}</span>{% endif %}
+        {% if task.completion_requested_at %}
+            <span><strong>Solicitada:</strong> {{ task.completion_requested_at|date:"d/m/Y H:i" }}</span>
+        {% endif %}
+        {% if task.completion_validated_at %}
+            <span><strong>Validada:</strong> {{ task.completion_validated_at|date:"d/m/Y H:i" }}</span>
+        {% endif %}
+    </div>
+</section>

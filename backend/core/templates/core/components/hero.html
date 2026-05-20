@@ -1,0 +1,14 @@
+<section class="hero {% if compact %}compact-hero{% endif %}">
+    <div>
+        <p class="eyebrow">{{ eyebrow }}</p>
+        <h2>{{ title }}</h2>
+        <p>{{ description }}</p>
+    </div>
+    {% if badge or highlight_value or highlight_text %}
+    <div class="hero-highlight">
+        {% if badge %}<span class="hero-badge">{{ badge }}</span>{% endif %}
+        {% if highlight_value %}<strong>{{ highlight_value }}</strong>{% endif %}
+        {% if highlight_text %}<small>{{ highlight_text }}</small>{% endif %}
+    </div>
+    {% endif %}
+</section>

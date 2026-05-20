@@ -1,0 +1,73 @@
+{% extends "core/base.html" %}
+
+{% block title %}Entrar | FCN TI{% endblock %}
+
+{% block content %}
+<section class="auth-grid">
+    <article class="panel auth-panel auth-showcase">
+        <div>
+            <p class="eyebrow">Acesso à plataforma</p>
+            <h2>Centralize operação, portfólio e esforço em um só lugar</h2>
+            <p>Entre com um usuário de demonstração para explorar a visão por perfil, o dashboard operacional e o fluxo de apontamento de horas.</p>
+        </div>
+
+        <section class="auth-feature-list">
+            <article class="info-card compact-card">
+                <strong>Visão por perfil</strong>
+                <span>Administrador, gerente e consultor com experiências separadas.</span>
+            </article>
+            <article class="info-card compact-card">
+                <strong>Projetos e métricas</strong>
+                <span>Billability, burn rate, margem e saúde da carteira em tempo real.</span>
+            </article>
+            <article class="info-card compact-card">
+                <strong>Operação rastreável</strong>
+                <span>Horas, tarefas e competências simuladas com base de demonstração mais realista.</span>
+            </article>
+        </section>
+
+        <section class="credentials-panel credentials-panel--stacked">
+            <article>
+                <strong>Administrador</strong>
+                <span>admin / admin123</span>
+            </article>
+            <article>
+                <strong>Gerentes</strong>
+                <span>marina.pm / manager123</span>
+                <span>rodrigo.ops / manager123</span>
+            </article>
+            <article>
+                <strong>Consultores</strong>
+                <span>caio.devops / consultant123</span>
+                <span>julia.data / consultant123</span>
+                <span>bruno.backend / consultant123</span>
+            </article>
+        </section>
+    </article>
+
+    <article class="panel auth-panel auth-form-panel">
+        <div>
+            <p class="eyebrow">Login</p>
+            <h2>Faça login para continuar</h2>
+            <p>Use uma credencial de demonstração para acessar a experiência correspondente ao seu papel.</p>
+        </div>
+
+        <form method="post" class="timesheet-form auth-form">
+            {% csrf_token %}
+            {% if form.non_field_errors %}
+                <small class="error">{{ form.non_field_errors|join:", " }}</small>
+            {% endif %}
+            {% for field in form %}
+                <div class="form-field">
+                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    {{ field }}
+                    {% if field.errors %}
+                        <small class="error">{{ field.errors|join:", " }}</small>
+                    {% endif %}
+                </div>
+            {% endfor %}
+            <button type="submit">Entrar na plataforma</button>
+        </form>
+    </article>
+</section>
+{% endblock %}

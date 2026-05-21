@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}FCN TI{% endblock %}</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+    <link rel="stylesheet" href="/static/css/app.css">
+</head>
+<body>
+    {% if request.user.is_authenticated %}
+        <div class="app-layout">
+            <aside class="sidebar">
+                <div class="brand-block">
+                    <p class="eyebrow">Plataforma de Gestão Integrada</p>
+                    <h1>FCN TI</h1>
+                    <p class="sidebar-text">Ambiente operacional da consultoria com visão separada por perfil.</p>
+                </div>
+
+                <nav class="sidebar-nav">
+                    {% for item in navigation_items %}
+                        <a href="{{ item.url }}" class="nav-link {% if page_name == item.page %}active{% endif %}">{{ item.label }}</a>
+                    {% endfor %}
+                    {% if request.user.is_staff %}
+                        <a href="/admin/" class="nav-link">Admin Django</a>
+                    {% endif %}
+                </nav>
+
+                <section class="role-card">
+                    <span class="role-chip">{{ role_label }}</span>
+                    <strong>{{ request.user.get_full_name|default:request.user.username }}</strong>
+                    <p>{{ request.user.email|default:"Conta interna da plataforma" }}</p>
+                </section>
+            </aside>
+
+            <div class="content-shell">
+                <header class="topbar app-topbar">
+                    <div>
+                        <p class="eyebrow">Área autenticada</p>
+                        <h2>{{ page_title|default:"FCN TI" }}</h2>
+                    </div>
+                    <div class="topbar-actions">
+                        <span class="topbar-user">{{ role_label }}</span>
+                        <form method="post" action="{% url 'core:logout' %}" class="inline-form">
+                            {% csrf_token %}
+                            <button type="submit" class="secondary-button">Sair</button>
+                        </form>
+                    </div>
+                </header>
+                <main class="page-shell">
+                    <div class="page-content">
+    {% else %}
+        <header class="topbar public-topbar">
+            <div>
+                <p class="eyebrow">Plataforma de Gestão Integrada</p>
+                <h1>FCN TI</h1>
+            </div>
+            <nav>
+                <a href="{% url 'core:login' %}">Entrar</a>
+            </nav>
+        </header>
+        <main class="page-shell public-shell">
+            <div class="page-content">
+    {% endif %}
+
+    {% if messages %}
+        <section class="messages">
+            {% for message in messages %}
+                <article class="message {{ message.tags }}">{{ message }}</article>
+            {% endfor %}
+        </section>
+    {% endif %}
+
+    {% block content %}{% endblock %}
+
+    </div>
+
+    {% if request.user.is_authenticated %}
+                </main>
+            </div>
+        </div>
+    {% else %}
+    </main>
+    {% endif %}
+</body>
+</html>

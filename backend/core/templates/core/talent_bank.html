@@ -1,0 +1,23 @@
+{% extends "core/base.html" %}
+
+{% block title %}Banco de Talentos | FCN TI{% endblock %}
+
+{% block content %}
+{% include "core/components/hero.html" with eyebrow="Equipe" title="Banco de talentos da consultoria" description="Visão simples de skills, carga registrada e tarefas atribuídas à equipe técnica." compact=True %}
+
+<section class="card-grid team-grid">
+    {% for member in team_overview %}
+        <article class="metric-card team-card">
+            <span>{{ member.user.get_full_name|default:member.user.username }}</span>
+            <strong>{{ member.hours_worked }}h</strong>
+            <p>{{ member.assigned_tasks }} tarefa(s) atribuída(s)</p>
+            <small>{{ member.skills|join:", "|default:"Sem skills cadastradas" }}</small>
+        </article>
+    {% empty %}
+        <article class="metric-card">
+            <strong>Nenhum consultor encontrado</strong>
+            <p>Cadastre usuários com perfil de consultor para preencher o banco de talentos.</p>
+        </article>
+    {% endfor %}
+</section>
+{% endblock %}

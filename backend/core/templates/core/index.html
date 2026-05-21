@@ -1,0 +1,187 @@
+{% extends "core/base.html" %}
+
+{% block title %}Dashboard | FCN TI{% endblock %}
+
+{% block content %}
+{% include "core/components/hero.html" with eyebrow="Experiência por perfil" title=hero_title description=hero_description badge=role_label highlight_value=summary.active_projects highlight_text="Projetos ativos monitorados agora" %}
+
+<section class="card-grid">
+    {% include "core/components/metric_card.html" with label="Billability" value=summary.billability|floatformat:2|add:"%" description="Horas faturáveis sobre o total registrado." %}
+    {% include "core/components/metric_card.html" with label="Burn Rate" value=summary.burn_rate|floatformat:2|add:"%" description="Custo interno consumido em relação ao orçamento." %}
+    {% include "core/components/metric_card.html" with label="Margem de Lucro" value=summary.profit_margin|floatformat:2|add:"%" description="Margem estimada com base no custo interno acumulado." %}
+    {% include "core/components/metric_card.html" with label="Projetos Ativos" value=summary.active_projects description="Contratos ativos atualmente acompanhados." %}
+    {% if dashboard_role == 'CONSULTANT' %}
+    {% include "core/components/metric_card.html" with label="Horas Pessoais" value=personal_summary.total_hours accent=True description="Total de horas lançadas por você." %}
+    {% include "core/components/metric_card.html" with label="Billability Pessoal" value=personal_summary.billability|floatformat:2|add:"%" accent=True description="Percentual das suas horas marcadas como faturáveis." %}
+    {% include "core/components/metric_card.html" with label="Em Validação" value=pending_approval_count accent=True description="Tarefas que você já enviou para revisão." %}
+    {% include "core/components/metric_card.html" with label="Concluídas" value=completed_tasks_count accent=True description="Tarefas já aprovadas pela gestão." %}
+    {% elif dashboard_role == 'ADMIN' %}
+    {% include "core/components/metric_card.html" with label="Usuários" value=users_count accent=True description="Pessoas cadastradas na plataforma." %}
+    {% include "core/components/metric_card.html" with label="Consultores" value=consultants_count accent=True description="Equipe operacional disponível no momento." %}
+    {% else %}
+    {% include "core/components/metric_card.html" with label="Contratos Ativos" value=active_contracts accent=True description="Frentes que exigem acompanhamento do portfólio." %}
+    {% include "core/components/metric_card.html" with label="Consultores" value=consultants_count accent=True description="Profissionais acompanhados no painel." %}
+    {% endif %}
+</section>
+
+{% if dashboard_role == 'CONSULTANT' %}
+<section class="panel workflow-highlight-panel">
+    {% include "core/components/panel_header.html" with eyebrow="Workflow da entrega" title="Como suas tarefas avançam até a conclusão" %}
+    <div class="workflow-overview-grid">
+        <article class="workflow-overview-card">
+            <span class="workflow-chip progress">1. Em execução</span>
+            <strong>Você desenvolve e registra o trabalho</strong>
+            <p>Enquanto a tarefa está em andamento, o foco é executar, apontar horas e consolidar o que foi entregue.</p>
+        </article>
+        <article class="workflow-overview-card">
+            <span class="workflow-chip pending">2. Em validação</span>
+            <strong>Você solicita revisão</strong>
+            <p>Quando entender que terminou, envia a tarefa para revisão do gerente ou administrador responsável.</p>
+        </article>
+        <article class="workflow-overview-card">
+            <span class="workflow-chip done">3. Concluída</span>
+            <strong>A gestão confirma a entrega</strong>
+            <p>Após validação, o progresso do projeto é atualizado sem depender exclusivamente do Django Admin.</p>
+        </article>
+    </div>
+</section>
+
+<section class="dashboard-grid consultant-grid">
+    <article class="panel">
+        {% include "core/components/panel_header.html" with eyebrow="Minhas tarefas" title="Fila de trabalho" %}
+        <div class="list-grid">
+            {% for task in assigned_tasks %}
+                <article class="info-card task-workflow-card">
+                    <div class="task-card-header">
+                        <div>
+                            <strong>{{ task.name }}</strong>
+                            <span>{{ task.project.name }}</span>
+                            <small>{{ task.project.contract.client_name }}</small>
+                        </div>
+                        <span class="task-status {{ task.status_css_class }}">{{ task.status_label }}</span>
+                    </div>
+                    {% include "core/components/task_workflow.html" with task=task %}
+                    {% if task.is_completed %}
+                        <small class="muted-text">Entrega aprovada e contabilizada no progresso do projeto.</small>
+                    {% elif task.completion_requested_at %}
+                        <small class="muted-text">Sua solicitação foi enviada. Agora a gestão precisa validar a conclusão.</small>
+                    {% else %}
+                        <form method="post" action="{% url 'core:task_request_completion' task.id %}" class="inline-action-form">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="{% url 'core:dashboard' %}">
+                            <button type="submit" class="secondary-button small-button">Solicitar validação</button>
+                        </form>
+                    {% endif %}
+                </article>
+            {% empty %}
+                <article class="empty-state">Nenhuma tarefa atribuída no momento.</article>
+            {% endfor %}
+        </div>
+    </article>
+
+    <article class="panel">
+        {% include "core/components/panel_header.html" with eyebrow="Últimos lançamentos" title="Histórico recente" %}
+        <ul class="entry-list">
+            {% for entry in recent_entries %}
+                <li>
+                    <strong>{{ entry.task.name }}</strong>
+                    <span>{{ entry.task.project.name }}</span>
+                    <span>{{ entry.date }} · {{ entry.hours_worked }}h</span>
+                </li>
+            {% empty %}
+                <li>Nenhum lançamento recente encontrado.</li>
+            {% endfor %}
+        </ul>
+    </article>
+</section>
+{% else %}
+<section class="dashboard-grid management-grid">
+    <article class="panel span-2">
+        {% include "core/components/panel_header.html" with eyebrow="Saúde operacional" title="Resumo por projeto" %}
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Projeto</th>
+                        <th>Cliente</th>
+                        <th>Progresso</th>
+                        <th>Billability</th>
+                        <th>Burn Rate</th>
+                        <th>Margem</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in projects_overview %}
+                    <tr>
+                        <td data-label="Projeto">{{ row.project.name }}</td>
+                        <td data-label="Cliente">{{ row.client_name }}</td>
+                        <td data-label="Progresso">{{ row.progress }}%</td>
+                        <td data-label="Billability">{{ row.billability }}%</td>
+                        <td data-label="Burn Rate">{{ row.burn_rate }}%</td>
+                        <td data-label="Margem">{{ row.profit_margin }}%</td>
+                        <td data-label="Status"><span class="status {{ row.health|lower }}">{{ row.health }}</span></td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7">Nenhum projeto ativo encontrado.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </article>
+
+    <article class="panel">
+        {% include "core/components/panel_header.html" with eyebrow="Equipe" title="Snapshot do time" %}
+        <div class="list-grid compact-grid">
+            {% for member in team_overview %}
+                <article class="info-card compact-card">
+                    <strong>{{ member.user.get_full_name|default:member.user.username }}</strong>
+                    <span>{{ member.hours_worked }}h apontadas</span>
+                    <small>{{ member.skills|join:", "|default:"Sem skills cadastradas" }}</small>
+                </article>
+            {% endfor %}
+        </div>
+    </article>
+    <article class="panel">
+        {% include "core/components/panel_header.html" with eyebrow="Validação" title="Fila de aprovação" %}
+        <div class="list-grid compact-grid">
+            {% for task in pending_task_approvals|slice:':4' %}
+                <article class="info-card compact-card pending-review-card">
+                    <div class="task-card-header compact-header">
+                        <div>
+                            <strong>{{ task.name }}</strong>
+                            <span>{{ task.project.name }} · {{ task.assigned_to|default:"Sem responsável" }}</span>
+                        </div>
+                        <span class="task-status pending">Em validação</span>
+                    </div>
+                    {% include "core/components/task_workflow.html" with task=task %}
+                </article>
+            {% empty %}
+                <article class="empty-state">Nenhuma tarefa aguardando validação agora.</article>
+            {% endfor %}
+        </div>
+    </article>
+    {% if dashboard_role == 'ADMIN' %}
+    <article class="panel">
+        {% include "core/components/panel_header.html" with eyebrow="Administração" title="Atalhos úteis" %}
+        <div class="action-grid">
+            <a class="action-card" href="{% url 'core:projects' %}">
+                <strong>Portfólio</strong>
+                <span>Revisar projetos e saúde.</span>
+            </a>
+            <a class="action-card" href="{% url 'core:talent_bank' %}">
+                <strong>Talentos</strong>
+                <span>Ver skills e capacidade da equipe.</span>
+            </a>
+            <a class="action-card" href="/admin/">
+                <strong>Admin Django</strong>
+                <span>Gerenciar dados brutos da plataforma.</span>
+            </a>
+        </div>
+    </article>
+    {% endif %}
+</section>
+{% endif %}
+{% endblock %}

@@ -205,3 +205,14 @@ cython_debug/
 marimo/_static/
 marimo/_lsp/
 __marimo__/
+
+# Ambientes customizados e credenciais locais/staging
+.env*.local
+.env.staging
+.env.production
+!.env.example
+!.env.staging.example
+
+# Staticfiles coletados em runtime
+backend/staticfiles/
+staticfiles/

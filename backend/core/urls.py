@@ -1,31 +1,37 @@
-"""Rotas públicas básicas do app principal."""
+"""Rotas públicas e endpoints de API do app principal."""
 
 from django.contrib.auth.views import LoginView, LogoutView
 from django.urls import path
 
+from .api import (
+    api_dashboard_metrics_view,
+    api_task_request_completion_view,
+    api_timesheet_create_view,
+)
 from .views import (
     dashboard_view,
     healthcheck_view,
     home_redirect_view,
-    project_create_view,
     project_archive_view,
+    project_create_view,
     project_restore_view,
     project_update_view,
     projects_view,
-    task_create_view,
+    talent_bank_view,
     task_archive_view,
+    task_create_view,
+    task_reopen_view,
     task_request_completion_view,
     task_restore_view,
-    task_reopen_view,
     task_update_view,
     task_validate_completion_view,
-    talent_bank_view,
     timesheet_create_view,
 )
 
 app_name = "core"
 
 urlpatterns = [
+    # Rotas de navegação Web
     path("", home_redirect_view, name="home"),
     path(
         "login/",
@@ -52,4 +58,13 @@ urlpatterns = [
     path("tasks/<int:task_id>/validate-completion/", task_validate_completion_view, name="task_validate_completion"),
     path("tasks/<int:task_id>/reopen/", task_reopen_view, name="task_reopen"),
     path("health/", healthcheck_view, name="healthcheck"),
+
+    # Endpoints REST API (JSON) - Projeto Integrador II
+    path("api/v1/timesheet/", api_timesheet_create_view, name="api_timesheet_create"),
+    path(
+        "api/v1/tasks/<int:task_id>/request-completion/",
+        api_task_request_completion_view,
+        name="api_task_request_completion",
+    ),
+    path("api/v1/dashboard/metrics/", api_dashboard_metrics_view, name="api_dashboard_metrics"),
 ]

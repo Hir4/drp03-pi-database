@@ -5,7 +5,7 @@
 {% block content %}
 {% include "core/components/hero.html" with eyebrow="Experiência por perfil" title=hero_title description=hero_description badge=role_label highlight_value=summary.active_projects highlight_text="Projetos ativos monitorados agora" %}
 
-<section class="card-grid">
+<section class="card-grid" aria-label="Indicadores principais da operação">
     {% include "core/components/metric_card.html" with label="Billability" value=summary.billability|floatformat:2|add:"%" description="Horas faturáveis sobre o total registrado." %}
     {% include "core/components/metric_card.html" with label="Burn Rate" value=summary.burn_rate|floatformat:2|add:"%" description="Custo interno consumido em relação ao orçamento." %}
     {% include "core/components/metric_card.html" with label="Margem de Lucro" value=summary.profit_margin|floatformat:2|add:"%" description="Margem estimada com base no custo interno acumulado." %}
@@ -25,7 +25,7 @@
 </section>
 
 {% if dashboard_role == 'CONSULTANT' %}
-<section class="panel workflow-highlight-panel">
+<section class="panel workflow-highlight-panel" aria-labelledby="workflow-guide-title">
     {% include "core/components/panel_header.html" with eyebrow="Workflow da entrega" title="Como suas tarefas avançam até a conclusão" %}
     <div class="workflow-overview-grid">
         <article class="workflow-overview-card">
@@ -47,11 +47,11 @@
 </section>
 
 <section class="dashboard-grid consultant-grid">
-    <article class="panel">
+    <article class="panel" aria-labelledby="assigned-tasks-heading">
         {% include "core/components/panel_header.html" with eyebrow="Minhas tarefas" title="Fila de trabalho" %}
         <div class="list-grid">
             {% for task in assigned_tasks %}
-                <article class="info-card task-workflow-card">
+                <article class="info-card task-workflow-card" id="task-card-{{ task.id }}">
                     <div class="task-card-header">
                         <div>
                             <strong>{{ task.name }}</strong>
@@ -66,10 +66,10 @@
                     {% elif task.completion_requested_at %}
                         <small class="muted-text">Sua solicitação foi enviada. Agora a gestão precisa validar a conclusão.</small>
                     {% else %}
-                        <form method="post" action="{% url 'core:task_request_completion' task.id %}" class="inline-action-form">
+                        <form method="post" action="{% url 'core:task_request_completion' task.id %}" class="inline-action-form task-request-completion-form" data-task-id="{{ task.id }}">
                             {% csrf_token %}
                             <input type="hidden" name="next" value="{% url 'core:dashboard' %}">
-                            <button type="submit" class="secondary-button small-button">Solicitar validação</button>
+                            <button type="submit" class="secondary-button small-button" aria-label="Solicitar validação para a tarefa {{ task.name }}">Solicitar validação</button>
                         </form>
                     {% endif %}
                 </article>
@@ -79,9 +79,9 @@
         </div>
     </article>
 
-    <article class="panel">
+    <article class="panel" aria-labelledby="recent-entries-heading">
         {% include "core/components/panel_header.html" with eyebrow="Últimos lançamentos" title="Histórico recente" %}
-        <ul class="entry-list">
+        <ul class="entry-list" aria-label="Histórico recente de lançamentos pessoais">
             {% for entry in recent_entries %}
                 <li>
                     <strong>{{ entry.task.name }}</strong>
@@ -96,19 +96,19 @@
 </section>
 {% else %}
 <section class="dashboard-grid management-grid">
-    <article class="panel span-2">
+    <article class="panel span-2" aria-labelledby="projects-health-heading">
         {% include "core/components/panel_header.html" with eyebrow="Saúde operacional" title="Resumo por projeto" %}
         <div class="table-wrapper">
-            <table>
+            <table aria-label="Tabela de saúde operacional dos projetos ativos">
                 <thead>
                     <tr>
-                        <th>Projeto</th>
-                        <th>Cliente</th>
-                        <th>Progresso</th>
-                        <th>Billability</th>
-                        <th>Burn Rate</th>
-                        <th>Margem</th>
-                        <th>Status</th>
+                        <th scope="col">Projeto</th>
+                        <th scope="col">Cliente</th>
+                        <th scope="col">Progresso</th>
+                        <th scope="col">Billability</th>
+                        <th scope="col">Burn Rate</th>
+                        <th scope="col">Margem</th>
+                        <th scope="col">Status</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -132,7 +132,7 @@
         </div>
     </article>
 
-    <article class="panel">
+    <article class="panel" aria-labelledby="team-snapshot-heading">
         {% include "core/components/panel_header.html" with eyebrow="Equipe" title="Snapshot do time" %}
         <div class="list-grid compact-grid">
             {% for member in team_overview %}
@@ -144,7 +144,7 @@
             {% endfor %}
         </div>
     </article>
-    <article class="panel">
+    <article class="panel" aria-labelledby="pending-approval-heading">
         {% include "core/components/panel_header.html" with eyebrow="Validação" title="Fila de aprovação" %}
         <div class="list-grid compact-grid">
             {% for task in pending_task_approvals|slice:':4' %}
@@ -164,7 +164,7 @@
         </div>
     </article>
     {% if dashboard_role == 'ADMIN' %}
-    <article class="panel">
+    <article class="panel" aria-labelledby="admin-shortcuts-heading">
         {% include "core/components/panel_header.html" with eyebrow="Administração" title="Atalhos úteis" %}
         <div class="action-grid">
             <a class="action-card" href="{% url 'core:projects' %}">
@@ -184,4 +184,8 @@
     {% endif %}
 </section>
 {% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/workflow.js"></script>
 {% endblock %}

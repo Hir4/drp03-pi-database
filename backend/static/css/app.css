@@ -997,3 +997,160 @@ button:hover {
         text-align: left;
     }
 }
+
+/* ==========================================================================
+   ACIBILIDADE WCAG 2.1 E COMPONENTES ASSÍNCRONOS - PROJETO INTEGRADOR II
+   ========================================================================== */
+
+/* Atalho para pular navegação (WCAG 2.4.1) */
+.skip-link {
+    position: absolute;
+    top: -120px;
+    left: 1.5rem;
+    background: var(--primary);
+    color: #ffffff;
+    padding: 0.75rem 1.25rem;
+    font-weight: 600;
+    border-radius: 0 0 8px 8px;
+    z-index: 10000;
+    text-decoration: none;
+    box-shadow: 0 10px 25px rgba(41, 82, 227, 0.4);
+    transition: top 0.2s ease-in-out;
+}
+
+.skip-link:focus {
+    top: 0;
+    outline: 3px solid #ffffff;
+    outline-offset: 2px;
+}
+
+/* Utilitário para leitores de tela */
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* Indicador de foco evidente para navegação autônoma por teclado (WCAG 2.4.7) */
+:focus-visible {
+    outline: 2px solid var(--primary) !important;
+    outline-offset: 2px !important;
+}
+
+/* Indicador de campo obrigatório */
+.required-indicator {
+    color: var(--danger);
+    font-weight: bold;
+    margin-left: 0.2rem;
+}
+
+/* Container e itens de notificações assíncronas visuais (Toasts) */
+.toast-container {
+    position: fixed;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+    z-index: 9999;
+    max-width: 400px;
+    pointer-events: none;
+}
+
+.toast-item {
+    pointer-events: auto;
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    padding: 0.85rem 1.25rem;
+    background: var(--surface);
+    color: var(--text);
+    border-radius: 8px;
+    box-shadow: 0 12px 30px rgba(20, 35, 84, 0.16);
+    border-left: 5px solid var(--primary);
+    font-size: 0.95rem;
+    animation: slideInRight 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.toast-item.toast-success {
+    border-left-color: var(--success);
+}
+
+.toast-item.toast-error {
+    border-left-color: var(--danger);
+}
+
+.toast-icon {
+    font-weight: 700;
+    font-size: 1.15rem;
+}
+
+.toast-success .toast-icon {
+    color: var(--success);
+}
+
+.toast-error .toast-icon {
+    color: var(--danger);
+}
+
+.toast-text {
+    flex: 1;
+    line-height: 1.4;
+}
+
+.toast-close {
+    background: none;
+    border: none;
+    color: var(--muted);
+    cursor: pointer;
+    font-size: 1.4rem;
+    line-height: 1;
+    padding: 0 0.25rem;
+}
+
+.toast-close:hover {
+    color: var(--text);
+}
+
+.toast-item.fade-out {
+    opacity: 0;
+    transform: translateX(40px);
+}
+
+@keyframes slideInRight {
+    from {
+        opacity: 0;
+        transform: translateX(50px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* Animação para novos itens inseridos dinamicamente na lista */
+.entry-item-animated {
+    animation: highlightEntry 2s ease-out;
+}
+
+@keyframes highlightEntry {
+    0% {
+        background-color: var(--primary-soft);
+        opacity: 0;
+        transform: translateY(-8px);
+    }
+    30% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+    100% {
+        background-color: transparent;
+    }
+}

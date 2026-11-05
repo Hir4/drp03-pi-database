@@ -5,10 +5,10 @@
 {% block content %}
 {% include "core/components/hero.html" with eyebrow="Execução operacional" title="Registrar horas do projeto" description="Lance esforço executado, detalhe o escopo técnico e mantenha os indicadores da operação atualizados." compact=True %}
 
-<section class="panel split-layout">
+<section class="panel split-layout" aria-labelledby="timesheet-form-title">
     <div>
         <p class="eyebrow">Preenchimento rápido</p>
-        <h2>Lançamento individual</h2>
+        <h2 id="timesheet-form-title">Lançamento individual</h2>
         <p>
             {% if is_consultant %}
                 Seu usuário já está vinculado automaticamente ao lançamento. Basta escolher uma tarefa atribuída, informar as horas e descrever a atividade.
@@ -16,36 +16,44 @@
                 Use o formulário abaixo para registrar esforço com data, tarefa, faturamento e descrição técnica.
             {% endif %}
         </p>
-        <form method="post" class="timesheet-form">
+        <form method="post" class="timesheet-form" novalidate aria-describedby="form-instructions">
+            <span id="form-instructions" class="sr-only">Formulário assíncrono para registro de horas trabalhadas em projetos.</span>
             {% csrf_token %}
             {% for field in form %}
                 <div class="form-field">
                     {% if field.widget_type != 'hidden' %}
-                    <label for="{{ field.id_for_label }}">{{ field.label }}</label>
+                    <label for="{{ field.id_for_label }}">
+                        {{ field.label }}
+                        {% if field.field.required %}<span class="required-indicator" aria-hidden="true">*</span><span class="sr-only">(campo obrigatório)</span>{% endif %}
+                    </label>
                     {% endif %}
                     {{ field }}
                     {% if field.errors %}
-                        <small class="error">{{ field.errors|join:", " }}</small>
+                        <small class="error field-error-msg" id="error-{{ field.name }}" role="alert">{{ field.errors|join:", " }}</small>
                     {% endif %}
                 </div>
             {% endfor %}
-            <button type="submit">Salvar lançamento</button>
+            <button type="submit" class="primary-button" aria-label="Salvar lançamento de horas">Salvar lançamento</button>
         </form>
     </div>
-    <aside class="side-panel">
-        <h3>{% if is_consultant %}Seus últimos lançamentos{% else %}Últimos lançamentos{% endif %}</h3>
+    <aside class="side-panel" role="complementary" aria-labelledby="recent-entries-title">
+        <h3 id="recent-entries-title">{% if is_consultant %}Seus últimos lançamentos{% else %}Últimos lançamentos{% endif %}</h3>
         <p class="side-text">Os registros mais recentes ajudam a validar rapidamente o que já entrou na base.</p>
-        <ul class="entry-list">
+        <ul class="entry-list" id="timesheet-entry-list" aria-label="Lista dos lançamentos mais recentes">
             {% for entry in recent_entries %}
-                <li>
+                <li class="entry-item">
                     <strong>{{ entry.user }}</strong>
                     <span>{{ entry.task.project.name }} · {{ entry.task.name }}</span>
                     <span>{{ entry.date }} · {{ entry.hours_worked }}h</span>
                 </li>
             {% empty %}
-                <li>Nenhum lançamento encontrado.</li>
+                <li class="empty-entry">Nenhum lançamento encontrado.</li>
             {% endfor %}
         </ul>
     </aside>
 </section>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/timesheet.js"></script>
 {% endblock %}

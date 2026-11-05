@@ -1,329 +1,164 @@
 # FCN TI | Plataforma de Gestão Integrada
 
-Este repositório contém o MVP acadêmico da plataforma da FCN TI, pensado para centralizar dados de operação, projetos, contratos, equipe técnica e lançamentos de horas em um único sistema.
+> **Projeto Integrador em Computação II (PJI240) — UNIVESP**  
+> Engenharia de Software e Arquitetura em Nuvem na Otimização de Processos de Negócio  
+> Polo Parque de Inovação Tecnológica — São José dos Campos/SP (2026)
 
-A ideia principal é substituir controles espalhados em planilhas por uma aplicação mais organizada, com dados consistentes, métricas em tempo real e uma base clara para evolução futura.
+Este repositório contém a evolução da plataforma corporativa da **FCN TI**, desenhada para substituir controles descentralizados em planilhas por uma solução robusta para gestão de contratos, alocação de equipe técnica, apontamento de horas (*timesheet*) e auditoria financeira (*billability* e *burn rate*).
 
-Hoje o projeto já entrega:
+---
 
-- backend funcional em Django;
-- banco PostgreSQL isolado em container próprio;
-- autenticação inicial com tela de login;
-- dashboard com indicadores de projetos;
-- formulário de registro de horas;
-- carga automática de dados de demonstração;
-- testes automatizados iniciais.
+## 📌 Organização de Branches do Repositório
 
-Os mocks já incluem cenários mais próximos da operação real, como ex-funcionário inativo com histórico preservado, projeto crítico por consumo acima do orçamento, projeto cancelado/arquivado e tarefa momentaneamente sem responsável.
+Para preservar o histórico acadêmico e as entregas da faculdade, mantemos duas branches principais:
 
-## O que este sistema resolve
+* **`main`**: Código congelado e homologado referente ao **Projeto Integrador 1**.
+* **`projeto-integrador-dois`** *(Atual)*: Branch ativa onde reside a evolução completa do **Projeto Integrador 2** (Nuvem, APIs REST, JavaScript Assíncrono, Acessibilidade WCAG e Testes Automatizados).
 
-Na prática, a aplicação foi desenhada para apoiar uma consultoria de TI que precisa:
+---
 
-- controlar usuários e seus papéis dentro da operação;
-- registrar competências técnicas da equipe;
-- organizar contratos e projetos por cliente;
-- quebrar projetos em tarefas;
-- registrar horas trabalhadas;
-- acompanhar faturamento, consumo de orçamento e margem.
+## 🚀 O Delta de Evolução: O que mudou do PI 1 para o PI 2?
 
-Em vez de tratar essas informações de forma separada, o sistema concentra tudo em um fluxo único.
+O Projeto Integrador 2 representa o salto de um protótipo estático monolítico para uma **plataforma distribuída em nuvem, acessível e dinâmica**:
 
-## Tecnologias utilizadas
+| Dimensão | Projeto Integrador 1 (`main`) | Projeto Integrador 2 (`projeto-integrador-dois`) |
+| :--- | :--- | :--- |
+| **Infraestrutura & Nuvem** | Hospedagem tradicional com quedas e porta de banco exposta | Deploy em nuvem (Hostinger VPS), Nginx como proxy reverso, Gunicorn e banco blindado |
+| **Interatividade de Interface** | Recarregamento total da tela a cada formulário enviado (*síncrono*) | **JavaScript Assíncrono (`fetch`)**: dados salvos em segundo plano com feedback visual instantâneo |
+| **Acessibilidade Universal** | Interface padrão sem conformidade assistiva | **WCAG 2.1 AA**: atalho *Skip Link*, suporte a leitores de tela e navegação 100% por teclado |
+| **Arquitetura de Dados** | Backend retornava exclusivamente HTML | **APIs REST (JSON)** para integração com frontend dinâmico e serviços externos |
+| **Garantia de Qualidade** | Testes manuais pontuais | Suíte de **testes automatizados de API e regressão** com pipeline de **CI/CD (GitHub Actions)** |
+| **Gestão de Dependências** | `requirements.txt` básico | **Poetry** com trava de versões criptográfica (`poetry.lock`) e separação produção/dev |
 
-O projeto segue a stack definida na especificação:
+---
 
-- Backend: Python 3.11 + Django;
-- Banco de dados: PostgreSQL 15;
-- Infraestrutura: Docker e Docker Compose;
-- Frontend futuro: HTML5 + CSS3 puros.
+## 💻 Guia Rápido para a Equipe: Como Rodar Localmente
 
-## Estrutura do repositório
+Qualquer membro do grupo (seja da área técnica ou de negócios) consegue rodar a aplicação completa na sua máquina usando apenas o **Docker Desktop**.
 
-Os diretórios e arquivos principais são:
-
-- [backend](backend): aplicação Django com models, views, serviços, templates, admin, migrações e seed de dados;
-- [tests](tests): testes automatizados da aplicação;
-- [docker-compose.yml](docker-compose.yml): composição dos serviços `backend` e `db`;
-- [.env.example](.env.example): configuração padrão de ambiente local;
-
-## Como o sistema funciona
-
-O ambiente sobe dois serviços separados:
-
-- `db`: container do PostgreSQL, responsável por armazenar os dados;
-- `backend`: container do Django, responsável pela aplicação web.
-
-Quando o backend inicia, ele executa automaticamente:
-
-1. as migrações do Django para criar e atualizar a estrutura do banco;
-2. o seed com dados de demonstração;
-3. o servidor web da aplicação.
-
-Essa abordagem evita conflito entre modelagem, banco e dados de apresentação, porque existe uma única fonte de verdade:
-
-- estrutura do banco: migrações do Django;
-- dados mockados: [backend/core/management/commands/seed_demo_data.py](backend/core/management/commands/seed_demo_data.py).
-
-## Fluxo de acesso atual
-
-Agora a rota inicial do sistema faz mais sentido para uso real:
-
-- ao acessar a raiz da aplicação, o usuário é levado para a tela de login;
-- depois do login, o sistema redireciona para o dashboard;
-- as páginas principais ficam protegidas por autenticação.
-
-Esse comportamento é mais coerente para um sistema interno e já prepara o projeto para evoluir regras de permissão por perfil.
-
-## Perfis de usuário
-
-O sistema trabalha com três papéis principais:
-
-### Administrador
-
-Perfil com maior nível de acesso.
-
-Responsabilidades esperadas:
-
-- administrar usuários;
-- administrar contratos, projetos, tarefas e skills;
-- acessar o painel administrativo do Django;
-- apoiar manutenção e gestão geral do sistema.
-
-No estado atual do MVP, o administrador é o perfil que já tem acesso ao admin do Django.
-
-### Gerente de Projetos
-
-Perfil voltado ao acompanhamento operacional e gerencial.
-
-Responsabilidades esperadas:
-
-- criar projetos dentro dos contratos ativos;
-- ajustar nome e orçamento dos projetos em andamento;
-- cadastrar tarefas e atribuir responsáveis da equipe técnica;
-- replanejar tarefas trocando responsável e horas estimadas;
-- filtrar a carteira por cliente, gerente e consultor;
-- arquivar e reativar projetos e tarefas sem excluir histórico;
-- acompanhar indicadores do dashboard;
-- analisar a saúde dos projetos;
-- validar entregas sinalizadas pela equipe e reabrir quando necessário;
-- acompanhar contratos, tarefas e esforço registrado;
-- apoiar decisões sobre orçamento e produtividade.
-
-### Consultor Técnico
-
-Perfil voltado à execução operacional.
-
-Responsabilidades esperadas:
-
-- registrar horas trabalhadas;
-- consultar tarefas atribuídas;
-- alimentar o sistema com dados que impactam os indicadores.
-
-### Observação importante sobre permissões
-
-Os papéis já existem no modelo de dados e no login, mas a segregação fina de telas e ações por perfil ainda será expandida nas próximas etapas.
-
-Hoje o projeto já possui:
-
-- autenticação obrigatória para acessar o conteúdo principal;
-- fluxo operacional de conclusão de tarefas com solicitação do consultor e validação da gestão;
-- criação de projeto e tarefa pela própria área de gestão;
-- acesso ao admin para usuários com permissão de staff.
-
-## Pré-requisitos
-
-O jeito mais fácil de rodar o projeto localmente é usando Docker.
-
-Você precisa ter instalado:
-
-- Git;
-- Docker;
-- Docker Compose.
-
-Se estiver usando versões recentes do Docker, o Compose normalmente já vem integrado no comando `docker compose`.
-
-## Instalação de pré-requisitos
-
-### Windows
-
-O caminho mais simples é:
-
-1. instalar o Git for Windows;
-2. instalar o Docker Desktop;
-3. garantir que o WSL2 esteja habilitado, se o Docker solicitar;
-4. reiniciar a máquina, se necessário.
-
-Depois disso, abra:
-
-- PowerShell;
-- Prompt de Comando; ou
-- terminal do VS Code.
-
-Para validar a instalação, rode:
-
-```powershell
-git --version
-docker --version
-docker compose version
-```
-
-### Linux
-
-Em distribuições baseadas em Ubuntu/Debian, o caminho mais comum é:
-
+### Passo 1. Garantir que está na branch correta
+No seu terminal (ou Git Bash / VS Code):
 ```bash
-sudo apt update
-sudo apt install git docker.io docker-compose-plugin
-sudo systemctl enable --now docker
+git checkout projeto-integrador-dois
+git pull origin projeto-integrador-dois
 ```
 
-Depois valide:
-
-```bash
-git --version
-docker --version
-docker compose version
-```
-
-Se quiser rodar Docker sem `sudo`, normalmente também é recomendado adicionar seu usuário ao grupo `docker`.
-
-## Como subir o projeto localmente em poucos passos
-
-### Passo 1. Clonar o repositório
-
-```bash
-git clone <url-do-repositorio>
-cd drp03-pi-database
-```
-
-### Passo 2. Criar o arquivo de ambiente
-
-```bash
-cp .env.example .env
-```
-
-No Windows, se estiver usando PowerShell, você pode copiar o arquivo manualmente pelo Explorer ou usar:
-
+### Passo 2. Criar o arquivo de configuração
+Basta copiar o arquivo de exemplo (no Windows PowerShell ou CMD):
 ```powershell
 Copy-Item .env.example .env
 ```
+*(No Linux ou Mac: `cp .env.example .env`)*
 
-### Passo 3. Subir a aplicação
-
+### Passo 3. Iniciar o sistema
 ```bash
 docker compose up --build
 ```
 
-Na primeira execução pode demorar um pouco mais, porque as imagens e dependências precisam ser preparadas.
+> 💡 **Dica de Desenvolvimento (Live-Reload):**  
+> O container local está sincronizado com a sua pasta de arquivos (`./backend:/app`). Isso significa que qualquer alteração que você fizer no código ou nos textos das telas é atualizada **na hora**, sem precisar reiniciar o Docker!
 
-### Passo 4. Acessar o sistema
+Quando o terminal indicar que o servidor subiu, basta acessar pelo navegador:
+* 🌐 **Aplicação Web:** [http://localhost:8000/](http://localhost:8000/)
+* 📊 **Dashboard:** [http://localhost:8000/dashboard/](http://localhost:8000/dashboard/)
+* ⏱️ **Registro de Horas:** [http://localhost:8000/timesheet/](http://localhost:8000/timesheet/)
+* ⚙️ **Painel Administrativo:** [http://localhost:8000/admin/](http://localhost:8000/admin/)
 
-Quando tudo terminar de subir, use:
-
-- login da aplicação: http://localhost:8000/
-- dashboard: http://localhost:8000/dashboard/
-- registro de horas: http://localhost:8000/timesheet/
-- admin Django: http://localhost:8000/admin/
-
-## Como parar o projeto
-
+Para parar a aplicação, pressione `Ctrl + C` no terminal ou execute em outra janela:
 ```bash
 docker compose down
 ```
 
-## Como recriar o ambiente do zero
+---
 
-Se quiser apagar o volume do banco e reconstruir tudo:
+## 🧪 Roteiro de Testes para o Time Validar as Novidades
+
+Se você for testar a aplicação para a apresentação ou conferir as alterações, siga estes passos simples:
+
+### 1. Testando o Registro de Horas Assíncrono (Sem F5)
+1. Faça login na plataforma com o usuário de demonstração:
+   * **Usuário:** `caio.devops` | **Senha:** `consultant123`
+2. Acesse a tela de **Registro de Horas** no menu lateral;
+3. Preencha uma quantidade de horas (ex: `4.5`), descreva uma atividade e clique em **"Salvar lançamento"**;
+4. **O que observar:**
+   * A tela **não recarrega** (não pisca);
+   * Um aviso flutuante verde (*Toast*) surge no canto inferior confirmando o sucesso;
+   * O novo lançamento aparece instantaneamente no topo da lista lateral com uma animação suave.
+
+### 2. Testando a Acessibilidade Universal (WCAG 2.1)
+1. Em qualquer tela do sistema, clique na barra de endereços do navegador e aperte a tecla **`Tab`** do teclado;
+2. **O que observar:**
+   * O botão azul de acessibilidade **"Pular para o conteúdo principal"** surge no topo da tela, permitindo que usuários que não usam mouse saltem a navegação direto para o que importa;
+   * Todos os botões e links ganham um contorno nítido de foco (:focus-visible) ao navegar com as setas e a tecla Tab.
+
+### 3. Testando o Workflow de Conclusão de Tarefas
+1. Logado como `caio.devops`, acesse a página inicial (**Dashboard**);
+2. Na seção **"Minhas tarefas"**, localize uma tarefa e clique em **"Solicitar validação"**;
+3. **O que observar:**
+   * A requisição é enviada assincronamente via API;
+   * O status da tarefa muda em tempo real para **"Em validação"** sem recarregar o dashboard.
+
+---
+
+## ☁️ Ambiente de Demonstração em Nuvem (Staging VPS)
+
+Para atender à disciplina de **Arquitetura em Nuvem**, a aplicação foi implantada em uma VPS Linux (Hostinger) configurada para alta resiliência e segurança:
+
+* 🌍 **Acesso Público ao Staging:** [http://72.61.48.173/login/](http://72.61.48.173/login/)
+* **Camada de Borda:** Firewall **UFW** liberando apenas portas essenciais (22, 80, 443) e **Fail2ban** contra ataques de força bruta;
+* **Servidor Web e Proxy:** **Nginx** fazendo cache de arquivos estáticos com compressão Gzip e atuando como proxy reverso para o **Gunicorn**;
+* **Blindagem de Banco:** O PostgreSQL opera em rede virtual interna isolada do Docker, sem nenhuma porta aberta para a internet pública.
+
+---
+
+## 👥 Credenciais dos Usuários de Demonstração
+
+O banco de dados já inicializa automaticamente populado com dados mockados realistas para simular a consultoria:
+
+| Perfil | Usuário | Senha | O que pode ver e fazer |
+| :--- | :--- | :--- | :--- |
+| **Administrador** | `admin` | `admin123` | Acesso total à governança, portfólio, métricas financeiras e Django Admin |
+| **Gerente de Projetos** | `marina.pm` | `manager123` | Criação e replanejamento de projetos, alocação de equipe e validação de entregas |
+| **Gerente de Operações** | `rodrigo.ops` | `manager123` | Acompanhamento do pipeline e gestão de capacidade de consultores |
+| **Consultor (DevOps)** | `caio.devops` | `consultant123` | Visualização da fila de trabalho individual e lançamento assíncrono de horas |
+| **Consultora (Dados)** | `julia.data` | `consultant123` | Apontamento de esforço em projetos de engenharia de dados |
+| **Consultor (Backend)** | `bruno.backend` | `consultant123` | Execução de tarefas técnicas com rastreamento de horas |
+
+---
+
+## 🧪 Execução da Bateria de Testes Automatizados
+
+Para certificar que as regras de negócio de faturamento e as APIs estão operando sem falhas:
 
 ```bash
-docker compose down -v
-docker compose up --build
-```
+# Executando via container Docker ativo:
+docker compose exec backend python manage.py test tests --settings=config.test_settings
 
-Isso é útil quando você quer reiniciar a base com os dados mockados desde o começo.
-
-## Credenciais de desenvolvimento
-
-### Banco PostgreSQL
-
-- banco: `fcn_ti_db`
-- usuário: `fcn_admin`
-- senha: `fcn_password`
-
-### Usuários de demonstração
-
-- administrador: `admin` / `admin123`
-- gerente: `marina.pm` / `manager123`
-- gerente: `rodrigo.ops` / `manager123`
-- consultor: `caio.devops` / `consultant123`
-- consultora: `julia.data` / `consultant123`
-- consultor: `bruno.backend` / `consultant123`
-- consultora: `renata.qa` / `consultant123`
-- consultora: `larissa.bi` / `consultant123`
-
-## Como rodar os testes
-
-O projeto já possui uma suíte inicial de testes cobrindo:
-
-- métricas de negócio do dashboard;
-- rotas principais da aplicação;
-- fluxo de autenticação inicial.
-
-### Executando com ambiente virtual ativo
-
-Se você estiver com o ambiente virtual ativado, rode:
-
-```bash
+# Ou diretamente com Python local (caso utilize ambiente virtual):
 python backend/manage.py test tests --settings=config.test_settings
 ```
 
-### Executando com caminho explícito do Python do ambiente virtual
+A cada alteração enviada para o repositório, o **GitHub Actions** executa essa mesma suíte automaticamente antes de autorizar qualquer deploy.
 
-Se preferir usar o executável diretamente:
+---
 
-```bash
-.venv/bin/python backend/manage.py test tests --settings=config.test_settings
+## 📁 Estrutura de Pastas
+
+```text
+├── .github/workflows/          # Automações de CI (Testes) e CD (Deploy na VPS)
+├── backend/
+│   ├── config/                 # Configurações do Django (settings, wsgi, urls)
+│   ├── core/                   # Aplicação principal (models, views, api, forms)
+│   ├── static/
+│   │   ├── css/app.css         # Folha de estilos e regras WCAG 2.1
+│   │   └── js/                 # Scripts assíncronos (api.js, timesheet.js, workflow.js)
+│   ├── Dockerfile              # Imagem do container da aplicação
+│   ├── entrypoint.sh           # Script de inicialização automática (migrações + mocks)
+│   └── pyproject.toml          # Gerenciamento moderno de dependências (Poetry)
+├── nginx/                      # Configurações do Proxy Reverso e compressão Gzip
+├── scripts/                    # Scripts de automação e segurança para a VPS
+├── tests/                      # Suíte de testes automatizados unitários e de integração
+├── docker-compose.yml          # Ambiente local dos desenvolvedores (Live-reload)
+├── docker-compose.staging.yml  # Ambiente de nuvem da VPS (Nginx + Gunicorn)
+└── README.md                   # Documentação do projeto
 ```
-
-No Windows, o equivalente costuma ser algo como:
-
-```powershell
-.venv\Scripts\python.exe backend\manage.py test tests --settings=config.test_settings
-```
-
-## Arquivos mais importantes para entender o projeto
-
-Se você estiver chegando agora, vale começar por estes pontos:
-
-- [backend/core/models.py](backend/core/models.py): entidades principais do domínio;
-- [backend/core/services.py](backend/core/services.py): regras de negócio e cálculos analíticos;
-- [backend/core/views.py](backend/core/views.py): fluxo de entrada, dashboard e registro de horas;
-- [backend/core/urls.py](backend/core/urls.py): rotas principais do app;
-- [backend/core/management/commands/seed_demo_data.py](backend/core/management/commands/seed_demo_data.py): dados de demonstração;
-- [backend/config/settings.py](backend/config/settings.py): configuração principal da aplicação;
-- [backend/config/test_settings.py](backend/config/test_settings.py): configuração de testes.
-
-## Estado atual do MVP
-
-Hoje o projeto já possui:
-
-- backend Django funcional;
-- PostgreSQL rodando em container separado;
-- autenticação inicial com login como rota padrão;
-- dashboard inicial com métricas analíticas;
-- formulário de lançamento de horas;
-- seed automático de dados de apresentação;
-- testes automatizados iniciais.
-
-## Resumo final
-
-Se a sua intenção é apenas subir o projeto sem complicação, o caminho mais simples é:
-
-1. instalar Git + Docker;
-2. clonar o repositório;
-3. copiar `.env.example` para `.env`;
-4. rodar `docker compose up --build`;
-5. abrir `http://localhost:8000/` e entrar com um usuário de demonstração.
-
-Esse fluxo já deve ser suficiente para apresentar o software localmente sem dificuldade.

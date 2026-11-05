@@ -1,0 +1,23 @@
+[tool.poetry]
+name = "fcn-ti-backend"
+version = "0.2.0"
+description = "Plataforma de Gestao Integrada - FCN TI (Projeto Integrador II)"
+authors = ["FCN TI Team"]
+readme = "../README.md"
+packages = [{include = "core"}]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+django = ">=5.1,<5.3"
+psycopg = {extras = ["binary"], version = ">=3.2,<3.3"}
+gunicorn = "^23.0.0"
+
+[tool.poetry.group.dev.dependencies]
+pytest = ">=8.0.0"
+pytest-django = ">=4.9.0"
+flake8 = ">=7.0.0"
+coverage = ">=7.6.0"
+
+[build-system]
+requires = ["poetry-core"]
+build-backend = "poetry.core.masonry.api"

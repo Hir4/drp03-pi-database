@@ -1,0 +1,47 @@
+name: Deploy Continuo Staging (CD)
+
+on:
+  push:
+    branches:
+      - projeto-integrador-dois
+
+jobs:
+  test:
+    name: Validar Testes Automatizados
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: |
+          python -m pip install --upgrade pip
+          pip install -r backend/requirements.txt
+          python backend/manage.py test tests --settings=config.test_settings
+
+  deploy:
+    name: Deploy Automatico na VPS Hostinger
+    needs: test
+    runs-on: ubuntu-latest
+    if: github.repository == 'Hir4/drp03-pi-database'
+
+    steps:
+      - name: Executar Deploy Remoto via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        env:
+          SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_KEY }}
+        if: env.SSH_PRIVATE_KEY != ''
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER || 'root' }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          port: ${{ secrets.VPS_PORT || 22 }}
+          script: |
+            set -e
+            echo "==> Atualizando codigo do repositorio..."
+            cd /app/fcn-ti
+            git fetch origin projeto-integrador-dois
+            git reset --hard origin/projeto-integrador-dois
+
+            echo "==> Executando deploy dos containers..."
+            bash scripts/deploy_staging.sh

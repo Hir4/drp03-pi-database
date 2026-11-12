@@ -31,10 +31,7 @@ jobs:
     steps:
       - name: Executar Deploy Remoto via SSH
         uses: appleboy/ssh-action@v1.0.3
-        env:
-          SSH_KEY: ${{ secrets.VPS_SSH_KEY }}
-          SSH_PASS: ${{ secrets.VPS_SSH_PASSWORD }}
-        if: env.SSH_KEY != '' || env.SSH_PASS != ''
+        if: ${{ secrets.VPS_SSH_KEY != '' || secrets.VPS_SSH_PASSWORD != '' }}
         with:
           host: ${{ secrets.VPS_HOST || '72.61.48.173' }}
           username: ${{ secrets.VPS_USER || 'root' }}

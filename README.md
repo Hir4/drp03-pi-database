@@ -143,6 +143,103 @@ A cada alteração enviada para o repositório, o **GitHub Actions** executa ess
 
 ---
 
+## 🏗️ Arquitetura Técnica (Diagramas)
+
+> Os diagramas abaixo são escritos em [Mermaid](https://mermaid.js.org/) e renderizados automaticamente pelo GitHub. Para editar, basta alterar o texto do bloco `mermaid` neste README.
+
+### 1. Infraestrutura do ambiente Staging (VPS)
+
+Definida em `docker-compose.staging.yml`. O container `backend` participa das duas redes: o Nginx alcança o Django pela `frontend_net`, mas apenas o Django alcança o PostgreSQL, pois a `backend_net` é `internal: true` (sem acesso à internet e sem porta publicada).
+
+```mermaid
+flowchart TB
+    user["🌐 Navegador<br/>HTTP :80 / HTTPS :443"]
+    gha["⚙️ GitHub Actions<br/>CI testes → CD via SSH"]
+
+    subgraph vps["VPS Hostinger (Linux) — Firewall UFW: 22, 80, 443 + Fail2ban"]
+        subgraph front["frontend_net"]
+            nginx["Nginx 1.27<br/>Proxy reverso · gzip · headers de segurança<br/>Rate limit 15 req/s por IP<br/>/static/ servido direto (cache 30d)"]
+            certbot["Certbot<br/>Let's Encrypt · renovação a cada 12h"]
+        end
+        subgraph back["backend_net (internal — isolada da internet)"]
+            django["Django + Gunicorn<br/>3 workers · porta 8000<br/>Views HTML + API REST JSON"]
+            db[("PostgreSQL 15<br/>porta 5432 não exposta<br/>volume pgdata_staging")]
+        end
+        vol_static[/"volume staticfiles_staging"/]
+        vol_cert[/"volumes certbot_conf / certbot_www"/]
+    end
+
+    user -->|requisições HTTP/HTTPS| nginx
+    gha -->|deploy via SSH| vps
+    nginx -->|proxy_pass http://backend:8000| django
+    django -->|ORM / SQL| db
+    django -. collectstatic grava .-> vol_static
+    vol_static -. leitura :ro .-> nginx
+    certbot -. emite / renova .-> vol_cert
+    vol_cert -. certificados :ro .-> nginx
+```
+
+### 2. Fluxo de uma requisição assíncrona (Registro de Horas)
+
+Exemplo do `POST /api/v1/timesheet/`, disparado por `static/js/timesheet.js` através do helper `apiRequest()` de `static/js/api.js`.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant JS as Navegador (timesheet.js)
+    participant NG as Nginx
+    participant DJ as Django (core/api.py)
+    participant PG as PostgreSQL
+
+    JS->>NG: POST /api/v1/timesheet/ (FormData + X-CSRFToken)
+    NG->>NG: rate limit (15 req/s por IP)
+    NG->>DJ: proxy_pass + X-Forwarded-For / Proto
+    DJ->>DJ: Middlewares (sessão, CSRF, autenticação)
+    DJ->>DJ: @login_required + TimesheetForm.is_valid()
+    alt Dados válidos
+        DJ->>PG: INSERT em core_timesheet
+        PG-->>DJ: registro criado
+        DJ-->>NG: 201 Created + JSON {success, message, entry}
+        NG-->>JS: resposta comprimida (gzip) + headers de segurança
+        JS->>JS: showToast() + aria-live + novo item no topo da lista
+    else Dados inválidos / sem permissão
+        DJ-->>NG: 400 / 403 + JSON {success: false, message, errors}
+        NG-->>JS: resposta de erro
+        JS->>JS: toast de alerta + destaque dos campos
+    end
+```
+
+**Endpoints REST (JSON) disponíveis:**
+
+| Método | Rota | Usado por | Respostas |
+| :--- | :--- | :--- | :--- |
+| `POST` | `/api/v1/timesheet/` | `timesheet.js` | 201, 400 |
+| `POST` | `/api/v1/tasks/<id>/request-completion/` | `workflow.js` | 200, 400, 403, 404 |
+| `GET` | `/api/v1/dashboard/metrics/` | integrações / dashboards | 200 |
+
+As demais rotas (`/dashboard/`, `/projects/`, `/tasks/...`, `/talent-bank/`) seguem o modelo tradicional: formulário síncrono → HTML renderizado → redirect. A rota `/health/` responde JSON para verificação de disponibilidade.
+
+### 3. Pipeline de CI/CD
+
+Definido em `.github/workflows/ci.yml` e `.github/workflows/deploy-staging.yml`. O deploy só roda se os testes passarem (`needs: test`).
+
+```mermaid
+flowchart LR
+    push["git push<br/>projeto-integrador-dois"] --> ci["CI: testes automatizados<br/>SQLite em memória"]
+    ci -->|falhou| stop["❌ deploy bloqueado"]
+    ci -->|passou| cd["CD: SSH na VPS<br/>git reset --hard"]
+    cd --> compose["deploy_staging.sh<br/>docker compose build + up -d"]
+
+    subgraph entry["entrypoint.sh (container backend)"]
+        direction LR
+        migrate["migrate"] --> seed["seed_demo_data"] --> static["collectstatic"] --> gunicorn["Gunicorn<br/>3 workers :8000"]
+    end
+
+    compose --> migrate
+```
+
+---
+
 ## 📁 Estrutura de Pastas
 
 ```text

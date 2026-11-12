@@ -65,6 +65,8 @@ services:
   certbot:
     image: certbot/certbot:latest
     container_name: fcn_staging_certbot
+    restart: unless-stopped
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
     volumes:
       - certbot_www:/var/www/certbot:rw
       - certbot_conf:/etc/letsencrypt:rw

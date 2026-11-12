@@ -4,8 +4,6 @@ on:
   push:
     branches:
       - projeto-integrador-dois
-  release:
-    types: [published]
   workflow_dispatch:
 
 jobs:
@@ -31,13 +29,11 @@ jobs:
     steps:
       - name: Executar Deploy Remoto via SSH
         uses: appleboy/ssh-action@v1.0.3
-        if: ${{ secrets.VPS_SSH_KEY != '' || secrets.VPS_SSH_PASSWORD != '' }}
         with:
-          host: ${{ secrets.VPS_HOST || '72.61.48.173' }}
-          username: ${{ secrets.VPS_USER || 'root' }}
-          key: ${{ secrets.VPS_SSH_KEY }}
+          host: ${{ secrets.VPS_HOST }}
+          username: root
           password: ${{ secrets.VPS_SSH_PASSWORD }}
-          port: ${{ secrets.VPS_PORT || 22 }}
+          port: 22
           script: |
             set -e
             echo "==> Atualizando codigo do repositorio na VPS..."

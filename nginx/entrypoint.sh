@@ -9,7 +9,7 @@ if [ -d "$CERT_DIR" ]; then
             CERT_DOMAIN=$(basename "$dir")
             echo "==> [Nginx] Certificado SSL detectado para o dominio: $CERT_DOMAIN"
             echo "==> [Nginx] Ativando servidor seguro HTTPS (porta 443)..."
-            sed -e "s|\${SSL_DOMAIN}|$CERT_DOMAIN|g" /etc/nginx/templates/nginx-ssl.conf.template > /etc/nginx/conf.d/default.conf
+            sed -e "s|\${SSL_DOMAIN}|$CERT_DOMAIN|g" /etc/nginx/custom-templates/nginx-ssl.conf.template > /etc/nginx/conf.d/default.conf
             exit 0
         fi
     done

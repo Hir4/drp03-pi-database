@@ -37,7 +37,14 @@ echo "==> 1. Garantindo que o Nginx esta ativo na porta 80..."
 docker compose --env-file .env.staging -f docker-compose.staging.yml up -d nginx
 
 echo "==> 2. Solicitando certificado SSL gratuito para: $DOMAIN..."
-docker compose --env-file .env.staging -f docker-compose.staging.yml run --rm certbot certonly \
+# Usar 'docker run' direto para contornar o entrypoint de renovacao do servico certbot
+CERTBOT_WWW_VOLUME=$(docker compose --env-file .env.staging -f docker-compose.staging.yml config --volumes | grep certbot_www | head -1 | awk '{print $NF}')
+PROJECT_NAME=$(basename "$(pwd)")
+
+docker run --rm \
+    -v "${PROJECT_NAME}_certbot_conf:/etc/letsencrypt" \
+    -v "${PROJECT_NAME}_certbot_www:/var/www/certbot" \
+    certbot/certbot certonly \
     --webroot \
     --webroot-path=/var/www/certbot \
     -d "$DOMAIN" \

@@ -1,8 +1,12 @@
 FROM nginx:1.27-alpine
 
-RUN rm /etc/nginx/conf.d/default.conf
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+RUN rm -f /etc/nginx/conf.d/default.conf
+RUN mkdir -p /etc/nginx/templates /var/www/certbot /var/www/staticfiles
 
-EXPOSE 80
+COPY templates/ /etc/nginx/templates/
+COPY entrypoint.sh /docker-entrypoint.d/40-ssl-detect.sh
+RUN chmod +x /docker-entrypoint.d/40-ssl-detect.sh
+
+EXPOSE 80 443
 
 CMD ["nginx", "-g", "daemon off;"]

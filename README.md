@@ -107,7 +107,8 @@ Para atender à disciplina de **Arquitetura em Nuvem**, a aplicação foi implan
 * 🌍 **Acesso Público ao Staging:** [http://72.61.48.173/login/](http://72.61.48.173/login/)
 * **Camada de Borda:** Firewall **UFW** liberando apenas portas essenciais (22, 80, 443) e **Fail2ban** contra ataques de força bruta;
 * **Servidor Web e Proxy:** **Nginx** fazendo cache de arquivos estáticos com compressão Gzip e atuando como proxy reverso para o **Gunicorn**;
-* **Blindagem de Banco:** O PostgreSQL opera em rede virtual interna isolada do Docker, sem nenhuma porta aberta para a internet pública.
+* **Blindagem de Banco:** O PostgreSQL opera em rede virtual interna isolada do Docker, sem nenhuma porta aberta para a internet pública;
+* **Certificado SSL/HTTPS Gratuito (Let's Encrypt):** Ativação em 1 comando via `bash scripts/setup_ssl.sh` utilizando o hostname da VPS ou subdomínio gratuito.
 
 ---
 

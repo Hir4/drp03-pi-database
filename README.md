@@ -104,7 +104,7 @@ Se você for testar a aplicação para a apresentação ou conferir as alteraç�
 
 Para atender à disciplina de **Arquitetura em Nuvem**, a aplicação foi implantada em uma VPS Linux (Hostinger) configurada para alta resiliência e segurança:
 
-* 🌍 **Acesso Público ao Staging:** [http://72.61.48.173/login/](http://72.61.48.173/login/)
+* 🌍 **Acesso Público ao Staging:** [https://srv1397595.hstgr.cloud/login/](https://srv1397595.hstgr.cloud/login/)
 * **Camada de Borda:** Firewall **UFW** liberando apenas portas essenciais (22, 80, 443) e **Fail2ban** contra ataques de força bruta;
 * **Servidor Web e Proxy:** **Nginx** fazendo cache de arquivos estáticos com compressão Gzip e atuando como proxy reverso para o **Gunicorn**;
 * **Blindagem de Banco:** O PostgreSQL opera em rede virtual interna isolada do Docker, sem nenhuma porta aberta para a internet pública;

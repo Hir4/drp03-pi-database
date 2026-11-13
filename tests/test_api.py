@@ -148,6 +148,11 @@ class ApiWorkflowAndMetricsTests(TestCase):
         self.assertIn("metrics", data)
         self.assertIn("billability_rate", data["metrics"])
         self.assertIn("active_projects_count", data["metrics"])
+        self.assertIn("charts", data)
+        self.assertIn("billability", data["charts"])
+        self.assertIn("projects_burn_rate", data["charts"])
+        self.assertIn("billable_percent", data["charts"]["billability"])
+        self.assertIn("burn_rates", data["charts"]["projects_burn_rate"])
 
 
 class AccessibilityTemplateTests(TestCase):

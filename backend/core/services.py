@@ -169,6 +169,8 @@ def get_dashboard_context() -> dict:
         "burn_rate": _percentage(total_internal_cost, total_budget),
         "profit_margin": _percentage(total_budget - total_internal_cost, total_budget) if total_budget else ZERO,
         "active_projects": active_projects.count(),
+        "total_hours": total_hours,
+        "total_billable_hours": total_billable_hours,
     }
     return {"summary": summary, "projects": project_rows}
 

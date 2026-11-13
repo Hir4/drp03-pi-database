@@ -24,6 +24,34 @@
     {% endif %}
 </section>
 
+<section class="charts-grid" aria-label="Visualização gráfica de indicadores de desempenho">
+    <article class="chart-card">
+        <header class="chart-header">
+            <span class="eyebrow">Eficiência Operacional</span>
+            <h3>Taxa de Billability</h3>
+            <p>Distribuição de horas faturáveis em relação ao total de horas apontadas.</p>
+        </header>
+        <div class="chart-canvas-wrapper">
+            <canvas id="chart-billability" role="img" aria-label="Gráfico de rosca da taxa de Billability">
+                <p class="sr-only sr-only-chart-desc">Gráfico de rosca exibindo a porcentagem de horas faturáveis versus não-faturáveis.</p>
+            </canvas>
+        </div>
+    </article>
+
+    <article class="chart-card">
+        <header class="chart-header">
+            <span class="eyebrow">Acompanhamento Orçamentário</span>
+            <h3>Burn Rate & Margem de Lucro por Projeto</h3>
+            <p>Consumo de orçamento interno e rentabilidade estimada dos projetos ativos.</p>
+        </header>
+        <div class="chart-canvas-wrapper">
+            <canvas id="chart-burn-rate" role="img" aria-label="Gráfico de barras de Burn Rate por projeto">
+                <p class="sr-only sr-only-chart-desc">Gráfico de barras exibindo o percentual de orçamento consumido e a margem de lucro por projeto.</p>
+            </canvas>
+        </div>
+    </article>
+</section>
+
 {% if dashboard_role == 'CONSULTANT' %}
 <section class="panel workflow-highlight-panel" aria-labelledby="workflow-guide-title">
     {% include "core/components/panel_header.html" with eyebrow="Workflow da entrega" title="Como suas tarefas avançam até a conclusão" %}
@@ -187,5 +215,7 @@
 {% endblock %}
 
 {% block scripts %}
+<script src="/static/js/chart.umd.min.js"></script>
+<script src="/static/js/dashboard-charts.js"></script>
 <script src="/static/js/workflow.js"></script>
 {% endblock %}

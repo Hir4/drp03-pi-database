@@ -118,19 +118,55 @@ def api_task_request_completion_view(request: HttpRequest, task_id: int) -> Json
 @login_required
 @require_http_methods(["GET"])
 def api_dashboard_metrics_view(request: HttpRequest) -> JsonResponse:
-    """Retorna métricas consolidadas em JSON para renderização dinâmica no frontend."""
+    """Retorna métricas consolidadas em JSON para renderização dinâmica no frontend (Chart.js)."""
     context = get_role_dashboard_context(request.user)
+    summary = context.get("summary", {})
+    projects = context.get("projects", [])
+
+    if request.user.role == UserRole.CONSULTANT:
+        personal = context.get("personal_summary", {})
+        billability_val = float(personal.get("billability", 0))
+        total_hours = float(personal.get("total_hours", 0))
+        billable_hours = float(personal.get("billable_hours", 0))
+        non_billable_hours = max(0.0, total_hours - billable_hours)
+    else:
+        billability_val = float(summary.get("billability", 0))
+        total_hours = float(summary.get("total_hours", 0))
+        billable_hours = float(summary.get("total_billable_hours", 0))
+        non_billable_hours = max(0.0, total_hours - billable_hours)
+
+    non_billable_percent = max(0.0, round(100.0 - billability_val, 2)) if total_hours > 0 else 0.0
+
+    project_labels = [row["project"].name for row in projects]
+    burn_rates = [float(row["burn_rate"]) for row in projects]
+    profit_margins = [float(row["profit_margin"]) for row in projects]
+    health_statuses = [row["health"] for row in projects]
 
     return JsonResponse(
         {
             "success": True,
             "role": request.user.role,
             "metrics": {
-                "billability_rate": str(context.get("billability_rate", 0)),
-                "burn_rate": str(context.get("burn_rate", 0)),
-                "profit_margin": str(context.get("profit_margin", 0)),
-                "active_projects_count": context.get("active_projects_count", 0),
+                "billability_rate": str(summary.get("billability", billability_val)),
+                "burn_rate": str(summary.get("burn_rate", 0)),
+                "profit_margin": str(summary.get("profit_margin", 0)),
+                "active_projects_count": summary.get("active_projects", len(projects)),
                 "consultants_count": context.get("consultants_count", 0),
+            },
+            "charts": {
+                "billability": {
+                    "billable_percent": billability_val,
+                    "non_billable_percent": non_billable_percent,
+                    "billable_hours": billable_hours,
+                    "non_billable_hours": non_billable_hours,
+                    "total_hours": total_hours,
+                },
+                "projects_burn_rate": {
+                    "labels": project_labels,
+                    "burn_rates": burn_rates,
+                    "profit_margins": profit_margins,
+                    "health_statuses": health_statuses,
+                },
             },
         },
         status=200,

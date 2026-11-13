@@ -224,14 +224,14 @@ As demais rotas (`/dashboard/`, `/projects/`, `/tasks/...`, `/talent-bank/`) seg
 Definido em `.github/workflows/ci.yml` e `.github/workflows/deploy-staging.yml`. O deploy só roda se os testes passarem (`needs: test`).
 
 ```mermaid
-flowchart LR
+flowchart TB
     push["git push<br/>projeto-integrador-dois"] --> ci["CI: testes automatizados<br/>SQLite em memória"]
     ci -->|falhou| stop["❌ deploy bloqueado"]
     ci -->|passou| cd["CD: SSH na VPS<br/>git reset --hard"]
     cd --> compose["deploy_staging.sh<br/>docker compose build + up -d"]
 
     subgraph entry["entrypoint.sh (container backend)"]
-        direction LR
+        direction TB
         migrate["migrate"] --> seed["seed_demo_data"] --> static["collectstatic"] --> gunicorn["Gunicorn<br/>3 workers :8000"]
     end
 

@@ -1,18 +1,19 @@
+{% load formatting %}
 {% with kpis=analytics.kpis %}
 <section class="card-grid analytics-kpis" aria-label="Indicadores do recorte selecionado">
     <article class="metric-card">
         <span>Horas no período</span>
-        <strong>{{ kpis.total_hours|floatformat:1 }}h</strong>
-        <p>{{ kpis.billable_hours|floatformat:1 }}h faturáveis e {{ kpis.non_billable_hours|floatformat:1 }}h não faturáveis.</p>
+        <strong>{{ kpis.total_hours|hours }}</strong>
+        <p>{{ kpis.billable_hours|hours }} faturáveis e {{ kpis.non_billable_hours|hours }} não faturáveis.</p>
     </article>
     <article class="metric-card">
         <span>Billability</span>
-        <strong>{{ kpis.billability|floatformat:1 }}%</strong>
+        <strong>{{ kpis.billability|pct }}</strong>
         <p>Horas faturáveis sobre o total lançado no período.</p>
     </article>
     <article class="metric-card">
         <span>Custo interno</span>
-        <strong>R$ {{ kpis.internal_cost|floatformat:"2g" }}</strong>
+        <strong>{{ kpis.internal_cost|brl }}</strong>
         <p>Horas do período multiplicadas pelo custo/hora de cada pessoa.</p>
     </article>
     <article class="metric-card {% if kpis.projects_at_risk %}accent-card{% endif %}">
@@ -22,7 +23,7 @@
     </article>
     <article class="metric-card">
         <span>Tempo médio de validação</span>
-        <strong>{% if kpis.average_validation_days is None %}—{% elif kpis.average_validation_days < 1 %}{{ kpis.average_validation_hours|floatformat:1 }}h{% else %}{{ kpis.average_validation_days|floatformat:1 }} dia{{ kpis.average_validation_days|pluralize }}{% endif %}</strong>
+        <strong>{% if kpis.average_validation_days is None %}—{% elif kpis.average_validation_days < 1 %}{{ kpis.average_validation_hours|hours }}{% else %}{{ kpis.average_validation_days|floatformat:1 }} dia{{ kpis.average_validation_days|pluralize }}{% endif %}</strong>
         <p>Do pedido do consultor até a aprovação da gestão.</p>
     </article>
     <article class="metric-card">

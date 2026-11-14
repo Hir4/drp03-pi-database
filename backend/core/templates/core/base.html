@@ -5,7 +5,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}FCN TI{% endblock %}</title>
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
-    <link rel="stylesheet" href="/static/css/app.css?v=2.1">
+    <script>
+        /* Aplica o tema salvo (ou o do sistema) antes de desenhar a página. */
+        (function () {
+            var theme = null;
+            try { theme = localStorage.getItem("fcn-theme"); } catch (e) {}
+            if (theme !== "dark" && theme !== "light") {
+                theme = window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+            }
+            document.documentElement.setAttribute("data-theme", theme);
+        })();
+    </script>
+    <link rel="stylesheet" href="/static/css/app.css?v=2.6">
     <style>
         /* Acessibilidade WCAG 2.4.1: Skip Link oculto por padrao, visivel apenas ao receber foco via Teclado (Tab) */
         .skip-link {
@@ -36,7 +47,7 @@
     </style>
     {% block extra_head %}{% endblock %}
 </head>
-<body>
+<body{% if open_dialog %} data-open-dialog="{{ open_dialog }}"{% endif %}>
     <!-- Acessibilidade WCAG 2.1: Atalho para pular direto ao conteúdo principal -->
     <a href="#main-content" class="skip-link">Pular para o conteúdo principal</a>
 
@@ -50,25 +61,36 @@
         <div class="app-layout">
             <aside class="sidebar" role="complementary" aria-label="Barra lateral">
                 <div class="brand-block">
-                    <p class="eyebrow">Plataforma de Gestão Integrada</p>
-                    <h1>FCN TI</h1>
+                    <div class="brand-row">
+                        <div>
+                            <p class="eyebrow">Plataforma de Gestão Integrada</p>
+                            <h1>FCN TI</h1>
+                        </div>
+                        <!-- Menu recolhível em telas pequenas (visível só abaixo de 960px) -->
+                        <button type="button" class="nav-toggle" aria-expanded="false" aria-controls="sidebar-menu">
+                            <span class="nav-toggle-icon" aria-hidden="true"></span>
+                            <span class="nav-toggle-label">Menu</span>
+                        </button>
+                    </div>
                     <p class="sidebar-text">Ambiente operacional da consultoria com visão separada por perfil.</p>
                 </div>
 
-                <nav class="sidebar-nav" aria-label="Navegação principal">
-                    {% for item in navigation_items %}
-                        <a href="{{ item.url }}" class="nav-link {% if page_name == item.page %}active{% endif %}" {% if page_name == item.page %}aria-current="page"{% endif %}>{{ item.label }}</a>
-                    {% endfor %}
-                    {% if request.user.is_staff %}
-                        <a href="/admin/" class="nav-link">Admin Django</a>
-                    {% endif %}
-                </nav>
+                <div class="sidebar-menu" id="sidebar-menu">
+                    <nav class="sidebar-nav" aria-label="Navegação principal">
+                        {% for item in navigation_items %}
+                            <a href="{{ item.url }}" class="nav-link {% if page_name == item.page %}active{% endif %}" {% if page_name == item.page %}aria-current="page"{% endif %}>{{ item.label }}</a>
+                        {% endfor %}
+                        {% if request.user.is_staff %}
+                            <a href="/admin/" class="nav-link">Admin Django</a>
+                        {% endif %}
+                    </nav>
 
-                <section class="role-card" aria-label="Dados do perfil logado">
-                    <span class="role-chip">{{ role_label }}</span>
-                    <strong>{{ request.user.get_full_name|default:request.user.username }}</strong>
-                    <p>{{ request.user.email|default:"Conta interna da plataforma" }}</p>
-                </section>
+                    <section class="role-card" aria-label="Dados do perfil logado">
+                        <span class="role-chip">{{ role_label }}</span>
+                        <strong>{{ request.user.get_full_name|default:request.user.username }}</strong>
+                        <p>{{ request.user.email|default:"Conta interna da plataforma" }}</p>
+                    </section>
+                </div>
             </aside>
 
             <div class="content-shell">
@@ -78,6 +100,10 @@
                         <h2>{{ page_title|default:"FCN TI" }}</h2>
                     </div>
                     <div class="topbar-actions">
+                        <button type="button" class="theme-toggle" data-theme-toggle aria-label="Ativar tema escuro">
+                            <span class="theme-toggle-icon" aria-hidden="true">☾</span>
+                            <span class="theme-toggle-label">Tema escuro</span>
+                        </button>
                         <span class="topbar-user">{{ role_label }}</span>
                         <form method="post" action="{% url 'core:logout' %}" class="inline-form">
                             {% csrf_token %}
@@ -96,6 +122,10 @@
             <nav aria-label="Navegação pública">
                 <!-- <a href="{% url 'core:login' %}">Entrar</a> -->
             </nav>
+            <button type="button" class="theme-toggle" data-theme-toggle aria-label="Ativar tema escuro">
+                <span class="theme-toggle-icon" aria-hidden="true">☾</span>
+                <span class="theme-toggle-label">Tema escuro</span>
+            </button>
         </header>
         <main id="main-content" class="page-shell public-shell" role="main" tabindex="-1">
             <div class="page-content">
@@ -104,10 +134,29 @@
     {% if messages %}
         <section class="messages" role="region" aria-label="Mensagens do sistema">
             {% for message in messages %}
-                <article class="message {{ message.tags }}" role="status">{{ message }}</article>
+                <article class="message {{ message.tags }}" role="status">
+                    <span>{{ message }}</span>
+                    {% if forloop.last and undo_action %}
+                        <form method="post" action="{{ undo_action.url }}" class="inline-form undo-form">
+                            {% csrf_token %}
+                            <input type="hidden" name="next" value="{{ request.get_full_path }}">
+                            <button type="submit" class="link-button undo-button">{{ undo_action.label }}</button>
+                        </form>
+                    {% endif %}
+                </article>
             {% endfor %}
         </section>
     {% endif %}
+
+    <!-- Confirmação acessível para ações destrutivas (formulários com data-confirm) -->
+    <dialog id="confirm-dialog" class="app-dialog confirm-dialog" aria-labelledby="confirm-dialog-title" aria-describedby="confirm-dialog-text">
+        <h2 id="confirm-dialog-title">Confirmar ação</h2>
+        <p id="confirm-dialog-text"></p>
+        <div class="dialog-actions">
+            <button type="button" class="secondary-button" data-confirm-cancel>Cancelar</button>
+            <button type="button" class="danger-button" data-confirm-accept>Confirmar</button>
+        </div>
+    </dialog>
 
     {% block content %}{% endblock %}
 
@@ -123,6 +172,7 @@
 
     <!-- Scripts utilitários assíncronos e de acessibilidade -->
     <script src="/static/js/api.js?v=2.1"></script>
+    <script src="/static/js/ui.js?v=1.1"></script>
     {% block scripts %}{% endblock %}
 </body>
 </html>

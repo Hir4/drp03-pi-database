@@ -23,10 +23,8 @@ from django.db.models.functions import Coalesce
 from django.utils import timezone
 
 from .models import Contract, Project, Task, Timesheet, User, UserRole
-from .services import COST_FIELD, HOURS_FIELD, ZERO, _percentage, _project_health
+from .services import COST_FIELD, HOURS_FIELD, ZERO, _percentage, _project_health, delivery_risk
 
-RISK_GAP_HIGH = Decimal("20")
-RISK_GAP_WARNING = Decimal("10")
 MAX_WEEKLY_BUCKETS = 26
 MONTH_LABELS = ["jan", "fev", "mar", "abr", "mai", "jun", "jul", "ago", "set", "out", "nov", "dez"]
 SECONDS_PER_DAY = 86400
@@ -346,13 +344,7 @@ def project_risk(filters: AnalyticsFilters) -> list[dict[str, Any]]:
         burn_rate = _percentage(cost, project.budget_allocated)
         progress = _percentage(Decimal(stats["done"]), Decimal(stats["total"])) if stats["total"] else ZERO
         margin = _percentage(project.budget_allocated - cost, project.budget_allocated)
-        gap = burn_rate - progress
-        if gap >= RISK_GAP_HIGH:
-            risk_level, risk_label = "high", "Em risco"
-        elif gap >= RISK_GAP_WARNING:
-            risk_level, risk_label = "warning", "Atenção"
-        else:
-            risk_level, risk_label = "ok", "No ritmo"
+        risk = delivery_risk(burn_rate, progress)
 
         manager = project.manager
         rows.append(
@@ -364,11 +356,11 @@ def project_risk(filters: AnalyticsFilters) -> list[dict[str, Any]]:
                 "internal_cost": _to_float(cost),
                 "burn_rate": _to_float(burn_rate),
                 "progress": _to_float(progress),
-                "gap": _to_float(gap),
+                "gap": _to_float(risk["gap"]),
                 "completed_tasks": stats["done"],
                 "total_tasks": stats["total"],
-                "risk_level": risk_level,
-                "risk_label": risk_label,
+                "risk_level": risk["risk_level"],
+                "risk_label": risk["risk_label"],
                 "health": _project_health(burn_rate, margin),
             }
         )

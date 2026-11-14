@@ -52,6 +52,9 @@ class ApiTimesheetTests(TestCase):
         self.assertTrue(data["success"])
         self.assertIn("entry", data)
         self.assertEqual(data["entry"]["hours_worked"], "5,50")
+        self.assertIn("totals", data)
+        self.assertIn("week_hours", data["totals"])
+        self.assertEqual(data["totals"]["week_target"], "40")
         self.assertEqual(data["entry"]["task"], self.task.name)
 
         # Valida persistência no banco de dados
@@ -147,11 +150,23 @@ class ApiWorkflowAndMetricsTests(TestCase):
         self.assertTrue(data["success"])
         self.assertIn("metrics", data)
         self.assertIn("billability_rate", data["metrics"])
-        self.assertIn("active_projects_count", data["metrics"])
+        self.assertIn("week_hours", data["metrics"])
         self.assertIn("charts", data)
         self.assertIn("billability", data["charts"])
-        self.assertIn("projects_burn_rate", data["charts"])
         self.assertIn("billable_percent", data["charts"]["billability"])
+        self.assertIn("weekly_hours", data["charts"])
+        self.assertEqual(len(data["charts"]["weekly_hours"]["labels"]), 8)
+        # Consultor não recebe dados financeiros da empresa.
+        self.assertNotIn("active_projects_count", data["metrics"])
+        self.assertNotIn("projects_burn_rate", data["charts"])
+
+    def test_dashboard_metrics_api_returns_company_kpis_for_manager(self) -> None:
+        manager = User.objects.create_user(username="gerente.metrics", password="x", role=UserRole.MANAGER)
+        self.client.force_login(manager)
+
+        data = self.client.get(reverse("core:api_dashboard_metrics")).json()
+
+        self.assertIn("active_projects_count", data["metrics"])
         self.assertIn("burn_rates", data["charts"]["projects_burn_rate"])
 
 
@@ -162,6 +177,16 @@ class AccessibilityTemplateTests(TestCase):
     def setUpTestData(cls) -> None:
         cls.scenario = create_project_scenario(username="user.a11y")
         cls.user = cls.scenario["user"]
+
+    def test_theme_toggle_is_available_on_authenticated_and_login_pages(self) -> None:
+        login_page = self.client.get(reverse("core:login")).content.decode("utf-8")
+        self.assertIn("data-theme-toggle", login_page)
+        # O tema é aplicado ainda no <head>, antes do CSS, para não "piscar" em branco.
+        self.assertLess(login_page.index('localStorage.getItem("fcn-theme")'), login_page.index("app.css"))
+
+        self.client.force_login(self.user)
+        dashboard = self.client.get(reverse("core:dashboard")).content.decode("utf-8")
+        self.assertIn('class="theme-toggle" data-theme-toggle aria-label="Ativar tema escuro"', dashboard)
 
     def test_base_template_contains_skip_link_and_landmarks(self) -> None:
         self.client.force_login(self.user)

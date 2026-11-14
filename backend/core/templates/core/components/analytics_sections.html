@@ -1,3 +1,4 @@
+{% load formatting %}
 {% comment %}
 Blocos de gráficos + tabelas da análise gerencial.
 Usado pela tela de Análises (print_mode=False: tabela recolhida em <details>)
@@ -22,18 +23,18 @@ Os gráficos são desenhados por static/js/analytics-charts.js a partir da API.
                     <thead>
                         <tr>
                             <th scope="col">Período</th>
-                            <th scope="col">Faturáveis (h)</th>
-                            <th scope="col">Não faturáveis (h)</th>
+                            <th scope="col">Faturáveis</th>
+                            <th scope="col">Não faturáveis</th>
                             <th scope="col">Billability</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for row in analytics.hours_trend.rows %}
                         <tr>
-                            <td data-label="Período">{{ row.label }}</td>
-                            <td data-label="Faturáveis (h)">{{ row.billable_hours|floatformat:1 }}</td>
-                            <td data-label="Não faturáveis (h)">{{ row.non_billable_hours|floatformat:1 }}</td>
-                            <td data-label="Billability">{{ row.billability|floatformat:1 }}%</td>
+                            <th scope="row" data-label="Período">{{ row.label }}</th>
+                            <td data-label="Faturáveis">{{ row.billable_hours|hours }}</td>
+                            <td data-label="Não faturáveis">{{ row.non_billable_hours|hours }}</td>
+                            <td data-label="Billability">{{ row.billability|pct }}</td>
                         </tr>
                         {% empty %}
                         <tr><td colspan="4">Nenhum lançamento no período escolhido.</td></tr>
@@ -63,20 +64,22 @@ Os gráficos são desenhados por static/js/analytics-charts.js a partir da API.
                             <th scope="col">Orçamento consumido</th>
                             <th scope="col">Tarefas concluídas</th>
                             <th scope="col">Diferença</th>
-                            <th scope="col">Situação</th>
+                            <th scope="col">Situação do orçamento</th>
+                            <th scope="col">Ritmo de entrega</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for row in analytics.project_risk %}
                         <tr>
-                            <td data-label="Projeto">{{ row.project }}<br><small class="muted-text">{{ row.client }}</small></td>
-                            <td data-label="Orçamento consumido">{{ row.burn_rate|floatformat:1 }}%</td>
-                            <td data-label="Tarefas concluídas">{{ row.progress|floatformat:1 }}% ({{ row.completed_tasks }}/{{ row.total_tasks }})</td>
+                            <th scope="row" data-label="Projeto">{{ row.project }}<br><small class="muted-text">{{ row.client }}</small></th>
+                            <td data-label="Orçamento consumido">{{ row.burn_rate|pct }}</td>
+                            <td data-label="Tarefas concluídas">{{ row.progress|pct }} ({{ row.completed_tasks }}/{{ row.total_tasks }})</td>
                             <td data-label="Diferença">{{ row.gap|floatformat:1 }} p.p.</td>
-                            <td data-label="Situação"><span class="risk-badge risk-{{ row.risk_level }}">{{ row.risk_label }}</span></td>
+                            <td data-label="Situação do orçamento">{% status_badge row.health %}</td>
+                            <td data-label="Ritmo de entrega">{% status_badge row.risk_label %}</td>
                         </tr>
                         {% empty %}
-                        <tr><td colspan="5">Nenhum projeto ativo para os filtros escolhidos.</td></tr>
+                        <tr><td colspan="6">Nenhum projeto ativo para os filtros escolhidos.</td></tr>
                         {% endfor %}
                     </tbody>
                 </table>
@@ -100,18 +103,18 @@ Os gráficos são desenhados por static/js/analytics-charts.js a partir da API.
                     <thead>
                         <tr>
                             <th scope="col">Projeto</th>
-                            <th scope="col">Estimado (h)</th>
-                            <th scope="col">Realizado (h)</th>
+                            <th scope="col">Estimado</th>
+                            <th scope="col">Realizado</th>
                             <th scope="col">Variação</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for row in analytics.estimate_vs_actual %}
                         <tr>
-                            <td data-label="Projeto">{{ row.project }}</td>
-                            <td data-label="Estimado (h)">{{ row.estimated_hours|floatformat:1 }}</td>
-                            <td data-label="Realizado (h)">{{ row.actual_hours|floatformat:1 }}</td>
-                            <td data-label="Variação">{% if row.variance_percent is None %}{{ row.status }}{% else %}{{ row.variance_percent|floatformat:1 }}% · {{ row.status }}{% endif %}</td>
+                            <th scope="row" data-label="Projeto">{{ row.project }}</th>
+                            <td data-label="Estimado">{{ row.estimated_hours|hours }}</td>
+                            <td data-label="Realizado">{{ row.actual_hours|hours }}</td>
+                            <td data-label="Variação">{% if row.variance_percent is None %}{{ row.status }}{% else %}{{ row.variance_percent|pct }} · {{ row.status }}{% endif %}</td>
                         </tr>
                         {% empty %}
                         <tr><td colspan="4">Nenhuma tarefa com estimativa ou horas lançadas.</td></tr>
@@ -138,18 +141,18 @@ Os gráficos são desenhados por static/js/analytics-charts.js a partir da API.
                     <thead>
                         <tr>
                             <th scope="col">Pessoa</th>
-                            <th scope="col">Total (h)</th>
-                            <th scope="col">Faturáveis (h)</th>
+                            <th scope="col">Total</th>
+                            <th scope="col">Faturáveis</th>
                             <th scope="col">Billability</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for row in analytics.team_load %}
                         <tr>
-                            <td data-label="Pessoa">{{ row.name }}<br><small class="muted-text">{{ row.role }}</small></td>
-                            <td data-label="Total (h)">{{ row.total_hours|floatformat:1 }}</td>
-                            <td data-label="Faturáveis (h)">{{ row.billable_hours|floatformat:1 }}</td>
-                            <td data-label="Billability">{{ row.billability|floatformat:1 }}%</td>
+                            <th scope="row" data-label="Pessoa">{{ row.name }}<br><small class="muted-text">{{ row.role }}</small></th>
+                            <td data-label="Total">{{ row.total_hours|hours }}</td>
+                            <td data-label="Faturáveis">{{ row.billable_hours|hours }}</td>
+                            <td data-label="Billability">{{ row.billability|pct }}</td>
                         </tr>
                         {% empty %}
                         <tr><td colspan="4">Nenhuma hora lançada no período escolhido.</td></tr>
@@ -184,10 +187,10 @@ Os gráficos são desenhados por static/js/analytics-charts.js a partir da API.
                     <tbody>
                         {% for row in analytics.client_profitability %}
                         <tr>
-                            <td data-label="Cliente">{{ row.client }}<br><small class="muted-text">{{ row.projects }} projeto{{ row.projects|pluralize }}</small></td>
-                            <td data-label="Orçamento">R$ {{ row.budget|floatformat:"2g" }}</td>
-                            <td data-label="Custo interno">R$ {{ row.internal_cost|floatformat:"2g" }}</td>
-                            <td data-label="Margem">{{ row.margin_percent|floatformat:1 }}%</td>
+                            <th scope="row" data-label="Cliente">{{ row.client }}<br><small class="muted-text">{{ row.projects }} projeto{{ row.projects|pluralize }}</small></th>
+                            <td data-label="Orçamento">{{ row.budget|brl }}</td>
+                            <td data-label="Custo interno">{{ row.internal_cost|brl }}</td>
+                            <td data-label="Margem">{{ row.margin_percent|pct }}</td>
                         </tr>
                         {% empty %}
                         <tr><td colspan="4">Nenhum cliente para os filtros escolhidos.</td></tr>
@@ -207,7 +210,7 @@ Os gráficos são desenhados por static/js/analytics-charts.js a partir da API.
                     Nenhuma validação concluída no período.
                 {% else %}
                     Tempo médio entre o pedido e a aprovação:
-                    {% if analytics.validation.average_lead_time_days < 1 %}{{ analytics.validation.average_lead_time_hours|floatformat:1 }}h{% else %}{{ analytics.validation.average_lead_time_days|floatformat:1 }} dia{{ analytics.validation.average_lead_time_days|pluralize }}{% endif %} ({{ analytics.validation.validated_count }} validaç{{ analytics.validation.validated_count|pluralize:"ão,ões" }} no período).
+                    {% if analytics.validation.average_lead_time_days < 1 %}{{ analytics.validation.average_lead_time_hours|hours }}{% else %}{{ analytics.validation.average_lead_time_days|floatformat:1 }} dia{{ analytics.validation.average_lead_time_days|pluralize }}{% endif %} ({{ analytics.validation.validated_count }} validaç{{ analytics.validation.validated_count|pluralize:"ão,ões" }} no período).
                 {% endif %}
             </p>
         </header>
@@ -226,7 +229,7 @@ Os gráficos são desenhados por static/js/analytics-charts.js a partir da API.
                 <tbody>
                     {% for row in analytics.validation.pending %}
                     <tr>
-                        <td data-label="Tarefa">{{ row.task }}</td>
+                        <th scope="row" data-label="Tarefa">{{ row.task }}</th>
                         <td data-label="Projeto">{{ row.project }}</td>
                         <td data-label="Responsável">{{ row.consultant }}</td>
                         <td data-label="Pedido em">{{ row.requested_at }}</td>

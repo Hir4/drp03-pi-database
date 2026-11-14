@@ -28,6 +28,8 @@ O Projeto Integrador 2 representa o salto de um protótipo estático monolítico
 | **Acessibilidade Universal** | Interface padrão sem conformidade assistiva | **WCAG 2.1 AA**: atalho *Skip Link*, suporte a leitores de tela e navegação 100% por teclado |
 | **Arquitetura de Dados** | Backend retornava exclusivamente HTML | **APIs REST (JSON)** para integração com frontend dinâmico e serviços externos |
 | **Análise Gerencial** | Indicadores apenas em números soltos no dashboard | **Tela de Análises com 5 gráficos (Chart.js)**, filtros por período/cliente/gerente, tabelas acessíveis e **relatório exportável em PDF** |
+| **Experiência por perfil** | Mesmo painel com finanças da empresa para todos | **Painel pessoal do consultor** (horas de hoje/semana, meta de 40h, billability própria) e painel financeiro só para gestão; confirmação e **"Desfazer"** ao arquivar; menu recolhível no celular |
+| **Conforto visual** | Somente tema claro | **Tema claro e escuro**: segue o sistema operacional na primeira visita e lembra a escolha do usuário; gráficos e selos com contraste AA nos dois temas |
 | **Garantia de Qualidade** | Testes manuais pontuais | Suíte de **testes automatizados de API e regressão** com pipeline de **CI/CD (GitHub Actions)** |
 | **Gestão de Dependências** | `requirements.txt` básico | **Poetry** com trava de versões criptográfica (`poetry.lock`) e separação produção/dev |
 
@@ -85,7 +87,9 @@ Se você for testar a aplicação para a apresentação ou conferir as alteraç�
 4. **O que observar:**
    * A tela **não recarrega** (não pisca);
    * Um aviso flutuante verde (*Toast*) surge no canto inferior confirmando o sucesso;
-   * O novo lançamento aparece instantaneamente no topo da lista lateral com uma animação suave.
+   * O novo lançamento aparece instantaneamente no topo da lista lateral com uma animação suave;
+   * O quadro **"Suas horas"** (hoje e semana, com a barra da meta de 40h) é atualizado na hora;
+   * A data já vem preenchida com o dia de hoje, e a caixa **"Faturável"** fica alinhada com sua explicação.
 
 ### 2. Testando a Acessibilidade Universal (WCAG 2.1)
 1. Em qualquer tela do sistema, clique na barra de endereços do navegador e aperte a tecla **`Tab`** do teclado;
@@ -99,6 +103,14 @@ Se você for testar a aplicação para a apresentação ou conferir as alteraç�
 3. **O que observar:**
    * A requisição é enviada assincronamente via API;
    * O status da tarefa muda em tempo real para **"Em validação"** sem recarregar o dashboard.
+
+### 3.1. Testando o painel pessoal do consultor
+1. Logado como `caio.devops`, abra o **Dashboard**;
+2. **O que observar:**
+   * O consultor vê **apenas os próprios números**: horas de hoje, horas na semana (meta de 40h), billability dos últimos 30 dias e suas tarefas;
+   * O gráfico **"Suas horas nas últimas 8 semanas"** separa faturáveis e não faturáveis, com a linha tracejada da meta;
+   * Cada tarefa mostra quanto da estimativa já foi consumido (em vermelho se passou do previsto) e o atalho **"Lançar horas"**, que abre o Registro de Horas com a tarefa já selecionada;
+   * Burn rate, margem e contratos da empresa **não aparecem** para o consultor (nem na API `/api/v1/dashboard/metrics/`).
 
 ### 4. Testando as Análises Gerenciais e o Relatório em PDF
 1. Faça login como gerente: **Usuário:** `marina.pm` | **Senha:** `manager123`;
@@ -115,6 +127,32 @@ Se você for testar a aplicação para a apresentação ou conferir as alteraç�
    * A tabela de **tarefas aguardando aprovação**, das mais antigas para as mais recentes.
 4. Use os filtros de **data inicial/final, cliente e gerente** e clique em **"Aplicar filtros"**: indicadores, gráficos e tabelas são recalculados para o recorte;
 5. Clique em **"Exportar relatório (PDF)"**: abre uma nova aba com o relatório formatado em A4 e a janela de impressão; escolha **"Salvar como PDF"** como destino.
+
+### 5. Testando a tela de Projetos (gestão)
+1. Logado como `marina.pm`, abra **Projetos**;
+2. **O que observar:**
+   * A carteira de projetos vem primeiro, com **progresso**, orçamento em reais (`R$ 90.000,00`), **Situação do orçamento** e **Ritmo de entrega**. Os selos usam ícone + texto (✓, !, ✕), não só cor, e seguem o mesmo critério da tela de Análises;
+   * **"Novo projeto"**, **"Nova tarefa"** e **"Editar"** abrem um painel (janela modal) já preenchido; `Esc` fecha e o foco volta ao botão de origem;
+   * O atalho **"N entregas aguardando sua validação"** leva direto à fila de aprovação;
+   * As tarefas ficam **agrupadas por projeto** em blocos recolhíveis;
+3. Clique em **"Arquivar"**: aparece uma confirmação. Depois de confirmar, a mensagem de sucesso traz o botão **"Desfazer"**, que reativa o item na hora.
+
+### 6. Testando o Banco de Talentos
+1. Ainda como gerente, abra **Talentos**;
+2. Filtre por **competência** (ex.: Business Intelligence) e **nível mínimo** (ex.: Avançado), ou busque pelo nome;
+3. **O que observar:** os consultores aparecem do **mais disponível para o mais carregado**, com a carga das últimas 4 semanas (sobre 160h), tarefas abertas, billability recente e as competências que atendem ao filtro destacadas.
+
+### 7. Testando o tema escuro
+1. Em qualquer tela (inclusive no login), clique em **"Tema escuro"** no topo;
+2. **O que observar:**
+   * A interface inteira muda de cor, inclusive os gráficos, que são redesenhados sem recarregar a página;
+   * Ao recarregar ou voltar outro dia, o sistema lembra a escolha (fica salva no navegador);
+   * Sem escolha salva, o sistema segue o tema do sistema operacional (claro/escuro);
+   * O relatório em PDF continua claro, pensado para impressão.
+
+### 8. Testando no celular
+1. Abra o sistema no celular (ou reduza a janela para menos de 960px);
+2. **O que observar:** o menu lateral vira um botão **"Menu"** no topo; as tabelas viram cartões e não há rolagem horizontal.
 
 > ℹ️ **Regra de período:** horas no tempo, carga da equipe e validações concluídas respeitam as datas filtradas. Estimado x realizado, risco dos projetos e rentabilidade por cliente consideram todo o histórico, porque orçamento e estimativas não são distribuídos ao longo do tempo. Tarefas concluídas diretamente pela gestão (sem pedido do consultor) não entram no tempo médio de validação.
 
@@ -282,10 +320,11 @@ flowchart TB
 ├── backend/
 │   ├── config/                 # Configurações do Django (settings, wsgi, urls)
 │   ├── core/                   # Aplicação principal (models, views, api, forms, analytics)
+│   │   └── templatetags/       # Filtros pt-BR (brl, pct, hours) e selo de status acessível
 │   ├── static/
 │   │   ├── css/app.css         # Folha de estilos e regras WCAG 2.1
 │   │   ├── css/report.css      # Layout de impressão do relatório em PDF (A4)
-│   │   └── js/                 # Scripts assíncronos (api.js, timesheet.js, workflow.js, analytics-charts.js)
+│   │   └── js/                 # Scripts (api.js, ui.js, timesheet.js, workflow.js, dashboard-charts.js, analytics-charts.js)
 │   ├── Dockerfile              # Imagem do container da aplicação
 │   ├── entrypoint.sh           # Script de inicialização automática (migrações + mocks)
 │   └── pyproject.toml          # Gerenciamento moderno de dependências (Poetry)

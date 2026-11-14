@@ -1,21 +1,67 @@
 {% extends "core/base.html" %}
+{% load formatting %}
 
 {% block title %}Dashboard | FCN TI{% endblock %}
 
 {% block content %}
+{% if dashboard_role == 'CONSULTANT' %}
+{% include "core/components/hero.html" with eyebrow="Seu painel" title=hero_title description=hero_description badge="Semana atual" highlight_value=hours_snapshot.week_hours|hours highlight_text="de 40h lançadas nesta semana" %}
+
+<section class="card-grid" aria-label="Seus indicadores pessoais">
+    {% include "core/components/metric_card.html" with label="Horas hoje" value=hours_snapshot.today_hours|hours description="Lançadas na data de hoje." %}
+    {% include "core/components/metric_card.html" with label="Horas na semana" value=hours_snapshot.week_hours|hours description="Meta de referência: 40h por semana." %}
+    {% include "core/components/metric_card.html" with label="Billability (30 dias)" value=personal_recent.billability|pct description="Suas horas faturáveis sobre o total dos últimos 30 dias." %}
+    {% include "core/components/metric_card.html" with label="Tarefas em execução" value=open_tasks_count accent=True description="Atribuídas a você e ainda em andamento." %}
+    {% include "core/components/metric_card.html" with label="Em validação" value=pending_approval_count accent=True description="Enviadas para revisão da gestão." %}
+    {% include "core/components/metric_card.html" with label="Concluídas" value=completed_tasks_count accent=True description="Entregas já aprovadas pela gestão." %}
+</section>
+
+<section class="week-progress panel" aria-labelledby="week-progress-title">
+    <div class="week-progress-header">
+        <h3 id="week-progress-title">Progresso da semana</h3>
+        <span>{{ hours_snapshot.week_hours|hours }} de {{ hours_snapshot.week_target|hours:0 }}</span>
+    </div>
+    <div class="progress-bar progress-bar-lg" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ hours_snapshot.week_progress|stringformat:'d' }}" aria-labelledby="week-progress-title">
+        <span style="width: {{ hours_snapshot.week_progress|stringformat:'d' }}%"></span>
+    </div>
+    <a class="button-link" href="{% url 'core:timesheet' %}">Lançar horas</a>
+</section>
+
+<section class="charts-grid" aria-label="Gráficos das suas horas">
+    <article class="chart-card">
+        <header class="chart-header">
+            <span class="eyebrow">Ritmo pessoal</span>
+            <h3>Suas horas nas últimas 8 semanas</h3>
+            <p>Faturáveis e não faturáveis por semana, com a meta de 40h.</p>
+        </header>
+        <div class="chart-canvas-wrapper">
+            <canvas id="chart-weekly-hours" role="img" aria-label="Gráfico de barras das suas horas por semana">
+                <p class="sr-only sr-only-chart-desc">Gráfico de barras com suas horas por semana.</p>
+            </canvas>
+        </div>
+    </article>
+    <article class="chart-card">
+        <header class="chart-header">
+            <span class="eyebrow">Últimos 30 dias</span>
+            <h3>Sua billability</h3>
+            <p>Proporção das suas horas marcadas como faturáveis.</p>
+        </header>
+        <div class="chart-canvas-wrapper">
+            <canvas id="chart-billability" role="img" aria-label="Gráfico de rosca da sua billability">
+                <p class="sr-only sr-only-chart-desc">Gráfico de rosca com suas horas faturáveis e não faturáveis.</p>
+            </canvas>
+        </div>
+    </article>
+</section>
+{% else %}
 {% include "core/components/hero.html" with eyebrow="Experiência por perfil" title=hero_title description=hero_description badge=role_label highlight_value=summary.active_projects highlight_text="Projetos ativos monitorados agora" %}
 
 <section class="card-grid" aria-label="Indicadores principais da operação">
-    {% include "core/components/metric_card.html" with label="Billability" value=summary.billability|floatformat:2|add:"%" description="Horas faturáveis sobre o total registrado." %}
-    {% include "core/components/metric_card.html" with label="Burn Rate" value=summary.burn_rate|floatformat:2|add:"%" description="Custo interno consumido em relação ao orçamento." %}
-    {% include "core/components/metric_card.html" with label="Margem de Lucro" value=summary.profit_margin|floatformat:2|add:"%" description="Margem estimada com base no custo interno acumulado." %}
+    {% include "core/components/metric_card.html" with label="Billability" value=summary.billability|pct description="Horas faturáveis sobre o total registrado." %}
+    {% include "core/components/metric_card.html" with label="Burn Rate" value=summary.burn_rate|pct description="Custo interno consumido em relação ao orçamento." %}
+    {% include "core/components/metric_card.html" with label="Margem de Lucro" value=summary.profit_margin|pct description="Margem estimada com base no custo interno acumulado." %}
     {% include "core/components/metric_card.html" with label="Projetos Ativos" value=summary.active_projects description="Contratos ativos atualmente acompanhados." %}
-    {% if dashboard_role == 'CONSULTANT' %}
-    {% include "core/components/metric_card.html" with label="Horas Pessoais" value=personal_summary.total_hours accent=True description="Total de horas lançadas por você." %}
-    {% include "core/components/metric_card.html" with label="Billability Pessoal" value=personal_summary.billability|floatformat:2|add:"%" accent=True description="Percentual das suas horas marcadas como faturáveis." %}
-    {% include "core/components/metric_card.html" with label="Em Validação" value=pending_approval_count accent=True description="Tarefas que você já enviou para revisão." %}
-    {% include "core/components/metric_card.html" with label="Concluídas" value=completed_tasks_count accent=True description="Tarefas já aprovadas pela gestão." %}
-    {% elif dashboard_role == 'ADMIN' %}
+    {% if dashboard_role == 'ADMIN' %}
     {% include "core/components/metric_card.html" with label="Usuários" value=users_count accent=True description="Pessoas cadastradas na plataforma." %}
     {% include "core/components/metric_card.html" with label="Consultores" value=consultants_count accent=True description="Equipe operacional disponível no momento." %}
     {% else %}
@@ -51,6 +97,7 @@
         </div>
     </article>
 </section>
+{% endif %}
 
 {% if dashboard_role != 'CONSULTANT' %}
 <section class="analytics-toolbar" aria-label="Atalho para a análise gerencial">
@@ -95,17 +142,29 @@
                         </div>
                         <span class="task-status {{ task.status_css_class }}">{{ task.status_label }}</span>
                     </div>
+                    <div class="estimate-usage">
+                        <div class="estimate-usage-text">
+                            <span>{{ task.logged_hours|hours }} lançadas de {{ task.estimated_hours|hours }} estimadas</span>
+                            {% if task.over_estimate %}<strong class="over-estimate"><span aria-hidden="true">! </span>Acima da estimativa</strong>{% endif %}
+                        </div>
+                        <div class="progress-bar{% if task.over_estimate %} progress-over{% endif %}" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ task.estimate_usage_bar|stringformat:'d' }}" aria-label="Consumo da estimativa de {{ task.name }}">
+                            <span style="width: {{ task.estimate_usage_bar|stringformat:'d' }}%"></span>
+                        </div>
+                    </div>
                     {% include "core/components/task_workflow.html" with task=task %}
                     {% if task.is_completed %}
                         <small class="muted-text">Entrega aprovada e contabilizada no progresso do projeto.</small>
                     {% elif task.completion_requested_at %}
                         <small class="muted-text">Sua solicitação foi enviada. Agora a gestão precisa validar a conclusão.</small>
                     {% else %}
-                        <form method="post" action="{% url 'core:task_request_completion' task.id %}" class="inline-action-form task-request-completion-form" data-task-id="{{ task.id }}">
-                            {% csrf_token %}
-                            <input type="hidden" name="next" value="{% url 'core:dashboard' %}">
-                            <button type="submit" class="secondary-button small-button" aria-label="Solicitar validação para a tarefa {{ task.name }}">Solicitar validação</button>
-                        </form>
+                        <div class="task-actions">
+                            <a class="button-link small-button" href="{% url 'core:timesheet' %}?task={{ task.id }}" aria-label="Lançar horas na tarefa {{ task.name }}">Lançar horas</a>
+                            <form method="post" action="{% url 'core:task_request_completion' task.id %}" class="inline-action-form task-request-completion-form" data-task-id="{{ task.id }}">
+                                {% csrf_token %}
+                                <input type="hidden" name="next" value="{% url 'core:dashboard' %}">
+                                <button type="submit" class="secondary-button small-button" aria-label="Solicitar validação para a tarefa {{ task.name }}">Solicitar validação</button>
+                            </form>
+                        </div>
                     {% endif %}
                 </article>
             {% empty %}
@@ -121,7 +180,7 @@
                 <li>
                     <strong>{{ entry.task.name }}</strong>
                     <span>{{ entry.task.project.name }}</span>
-                    <span>{{ entry.date }} · {{ entry.hours_worked }}h</span>
+                    <span>{{ entry.date|date:"d/m/Y" }} · {{ entry.hours_worked|hours }}{% if not entry.is_billable %} · não faturável{% endif %}</span>
                 </li>
             {% empty %}
                 <li>Nenhum lançamento recente encontrado.</li>
@@ -134,7 +193,8 @@
     <article class="panel span-2" aria-labelledby="projects-health-heading">
         {% include "core/components/panel_header.html" with eyebrow="Saúde operacional" title="Resumo por projeto" %}
         <div class="table-wrapper">
-            <table aria-label="Tabela de saúde operacional dos projetos ativos">
+            <table>
+                <caption class="sr-only">Saúde operacional dos projetos ativos</caption>
                 <thead>
                     <tr>
                         <th scope="col">Projeto</th>
@@ -143,23 +203,25 @@
                         <th scope="col">Billability</th>
                         <th scope="col">Burn Rate</th>
                         <th scope="col">Margem</th>
-                        <th scope="col">Status</th>
+                        <th scope="col">Situação do orçamento</th>
+                        <th scope="col">Ritmo de entrega</th>
                     </tr>
                 </thead>
                 <tbody>
                     {% for row in projects_overview %}
                     <tr>
-                        <td data-label="Projeto">{{ row.project.name }}</td>
+                        <th scope="row" data-label="Projeto">{{ row.project.name }}</th>
                         <td data-label="Cliente">{{ row.client_name }}</td>
-                        <td data-label="Progresso">{{ row.progress }}%</td>
-                        <td data-label="Billability">{{ row.billability }}%</td>
-                        <td data-label="Burn Rate">{{ row.burn_rate }}%</td>
-                        <td data-label="Margem">{{ row.profit_margin }}%</td>
-                        <td data-label="Status"><span class="status {{ row.health|lower }}">{{ row.health }}</span></td>
+                        <td data-label="Progresso">{{ row.progress|pct }}</td>
+                        <td data-label="Billability">{{ row.billability|pct }}</td>
+                        <td data-label="Burn Rate">{{ row.burn_rate|pct }}</td>
+                        <td data-label="Margem">{{ row.profit_margin|pct }}</td>
+                        <td data-label="Situação do orçamento">{% status_badge row.health "Custo consumido e margem do projeto" %}</td>
+                        <td data-label="Ritmo de entrega">{% status_badge row.risk_label "Orçamento consumido comparado às tarefas concluídas" %}</td>
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="7">Nenhum projeto ativo encontrado.</td>
+                        <td colspan="8">Nenhum projeto ativo encontrado.</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -173,7 +235,7 @@
             {% for member in team_overview %}
                 <article class="info-card compact-card">
                     <strong>{{ member.user.get_full_name|default:member.user.username }}</strong>
-                    <span>{{ member.hours_worked }}h apontadas</span>
+                    <span>{{ member.recent_hours|hours }} nas últimas 4 semanas · {{ member.load_label }}</span>
                     <small>{{ member.skills|join:", "|default:"Sem skills cadastradas" }}</small>
                 </article>
             {% endfor %}
@@ -223,6 +285,6 @@
 
 {% block scripts %}
 <script src="/static/js/chart.umd.min.js"></script>
-<script src="/static/js/dashboard-charts.js"></script>
+<script src="/static/js/dashboard-charts.js?v=2.2"></script>
 <script src="/static/js/workflow.js"></script>
 {% endblock %}

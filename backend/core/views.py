@@ -23,8 +23,12 @@ from .services import (
     get_management_task_board,
     get_pending_task_approvals,
     get_projects_overview,
+    RECENT_LOAD_WEEKS,
+    WEEKLY_HOURS_TARGET,
     get_role_dashboard_context,
+    get_skill_filter_options,
     get_team_overview,
+    get_user_hours_snapshot,
 )
 
 
@@ -74,7 +78,14 @@ def _base_context(request: HttpRequest, page_name: str, page_title: str) -> dict
         "page_title": page_title,
         "navigation_items": _build_navigation(request),
         "role_label": request.user.get_role_display() if request.user.is_authenticated else "Visitante",
+        # Ação "Desfazer" oferecida uma única vez depois de um arquivamento.
+        "undo_action": request.session.pop("undo_action", None) if hasattr(request, "session") else None,
     }
+
+
+def _offer_undo(request: HttpRequest, url: str, label: str) -> None:
+    """Guarda na sessão a ação de desfazer exibida junto da mensagem de sucesso."""
+    request.session["undo_action"] = {"url": url, "label": label}
 
 
 def _ensure_management_access(request: HttpRequest) -> HttpResponse | None:
@@ -98,6 +109,26 @@ def _redirect_back(request: HttpRequest, fallback_name: str) -> HttpResponse:
     return redirect(fallback_name)
 
 
+def _group_tasks_by_project(tasks: list[Task]) -> list[dict[str, object]]:
+    """Agrupa o board de tarefas por projeto, com contagem por situação."""
+    groups: dict[int, dict[str, object]] = {}
+    for task in tasks:
+        group = groups.setdefault(
+            task.project_id,
+            {"project": task.project, "tasks": [], "pending": 0, "done": 0, "open": 0},
+        )
+        group["tasks"].append(task)
+        if task.is_archived:
+            continue
+        if task.is_completed:
+            group["done"] += 1
+        elif task.completion_requested_at is not None:
+            group["pending"] += 1
+        else:
+            group["open"] += 1
+    return list(groups.values())
+
+
 def _projects_page_context(
     request: HttpRequest,
     *,
@@ -114,15 +145,31 @@ def _projects_page_context(
         "consultant": request.GET.get("consultant", ""),
         "include_archived": request.GET.get("include_archived", ""),
     }
+    task_board = get_management_task_board(selected_filters)
     context = {
         "projects_overview": get_projects_overview(selected_filters),
-        "task_board": get_management_task_board(selected_filters),
+        "task_board": task_board,
+        "task_groups": _group_tasks_by_project(task_board),
         "pending_task_approvals": get_pending_task_approvals(selected_filters),
         "project_form": project_form or ProjectManagementForm(),
         "task_form": task_form or TaskManagementForm(),
         "project_update_form": project_update_form or ProjectUpdateForm(),
         "task_update_form": task_update_form or TaskUpdateForm(),
         "management_filters": selected_filters,
+        # Reabre o painel do formulário que voltou com erro de validação.
+        "open_dialog": next(
+            (
+                name
+                for name, form in (
+                    ("dialog-project-create", project_form),
+                    ("dialog-task-create", task_form),
+                    ("dialog-project-update", project_update_form),
+                    ("dialog-task-update", task_update_form),
+                )
+                if form is not None and form.is_bound and form.errors
+            ),
+            "",
+        ),
     }
     context.update(get_management_filter_options())
     context.update(_base_context(request, "projects", "Portfólio de Projetos"))
@@ -347,6 +394,7 @@ def project_archive_view(request: HttpRequest, project_id: int) -> HttpResponse:
     project = get_object_or_404(Project, pk=project_id)
     project.archive()
     messages.success(request, f"Projeto '{project.name}' arquivado com sucesso.")
+    _offer_undo(request, reverse("core:project_restore", args=[project.id]), f"Desfazer: reativar '{project.name}'")
     return _redirect_back(request, "core:projects")
 
 
@@ -381,6 +429,7 @@ def task_archive_view(request: HttpRequest, task_id: int) -> HttpResponse:
     task = get_object_or_404(Task, pk=task_id)
     task.archive()
     messages.success(request, f"Tarefa '{task.name}' arquivada com sucesso.")
+    _offer_undo(request, reverse("core:task_restore", args=[task.id]), f"Desfazer: reativar '{task.name}'")
     return _redirect_back(request, "core:projects")
 
 
@@ -407,9 +456,14 @@ def talent_bank_view(request: HttpRequest) -> HttpResponse:
     redirect_response = _ensure_management_access(request)
     if redirect_response is not None:
         return redirect_response
+    talent_filters = {key: request.GET.get(key, "") for key in ("q", "skill", "level")}
     context = {
-        "team_overview": get_team_overview(),
+        "team_overview": get_team_overview(talent_filters),
+        "talent_filters": talent_filters,
+        "load_weeks": RECENT_LOAD_WEEKS,
+        "load_capacity": WEEKLY_HOURS_TARGET * RECENT_LOAD_WEEKS,
     }
+    context.update(get_skill_filter_options())
     context.update(_base_context(request, "talent_bank", "Banco de Talentos"))
     return render(request, "core/talent_bank.html", context)
 
@@ -424,13 +478,18 @@ def timesheet_create_view(request: HttpRequest) -> HttpResponse:
             messages.success(request, "Lançamento registrado com sucesso.")
             return redirect("core:timesheet")
     else:
-        form = TimesheetForm(current_user=request.user)
+        initial = {"date": timezone.localdate(), "is_billable": True}
+        task_id = request.GET.get("task", "")
+        if task_id.isdigit():
+            initial["task"] = int(task_id)
+        form = TimesheetForm(current_user=request.user, initial=initial)
 
     recent_entries = _recent_timesheets_for(request)
     context = {
         "form": form,
         "recent_entries": recent_entries,
         "is_consultant": request.user.role == UserRole.CONSULTANT,
+        "hours_snapshot": get_user_hours_snapshot(request.user),
     }
     context.update(_base_context(request, "timesheet", "Registro de Horas"))
     return render(request, "core/timesheet.html", context)

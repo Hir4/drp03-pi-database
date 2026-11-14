@@ -20,7 +20,34 @@
         grid: "rgba(26, 35, 64, 0.08)"
     };
     const RISK_COLORS = { ok: COLORS.success, warning: COLORS.warning, high: COLORS.danger };
+
+    // Cores lidas das variáveis CSS: os gráficos acompanham o tema claro/escuro.
+    function themeColor(name, fallback) {
+        const value = getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+        return value || fallback;
+    }
+
+    function gridColor() {
+        return document.documentElement.dataset.theme === "dark"
+            ? "rgba(231, 235, 247, 0.1)"
+            : "rgba(26, 35, 64, 0.08)";
+    }
+
+    function applyTheme() {
+        COLORS.primary = themeColor("--primary", "#2952e3");
+        COLORS.success = themeColor("--success", "#1d8f5f");
+        COLORS.warning = themeColor("--warning", "#c68317");
+        COLORS.danger = themeColor("--danger", "#cb3a54");
+        COLORS.grid = gridColor();
+        RISK_COLORS.ok = COLORS.success;
+        RISK_COLORS.warning = COLORS.warning;
+        RISK_COLORS.high = COLORS.danger;
+        Chart.defaults.color = themeColor("--muted", "#5f6c8c");
+    }
     const RISK_LABELS = { ok: "No ritmo", warning: "Atenção", high: "Em risco" };
+    // Formas diferentes por situação: a leitura não depende só da cor (WCAG 1.4.1).
+    const RISK_SHAPES = { ok: "circle", warning: "rectRot", high: "triangle" };
+    const REDUCED_MOTION = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
     const number = new Intl.NumberFormat("pt-BR", { maximumFractionDigits: 1 });
     const money = new Intl.NumberFormat("pt-BR", { style: "currency", currency: "BRL", maximumFractionDigits: 0 });
@@ -30,11 +57,11 @@
         return {
             responsive: true,
             maintainAspectRatio: false,
-            animation: isReport ? false : { duration: 400 },
+            animation: isReport || REDUCED_MOTION ? false : { duration: 400 },
             plugins: {
                 legend: {
                     position: "bottom",
-                    labels: { boxWidth: 14, padding: 14, font: { size: 12 } }
+                    labels: { boxWidth: 14, padding: 14, font: { size: 12 }, usePointStyle: true }
                 }
             }
         };
@@ -63,6 +90,13 @@
         if (canvas && canvas.parentElement) {
             canvas.parentElement.style.height = Math.max(280, rows * 34 + 90) + "px";
         }
+    }
+
+    // Libera o gráfico que já estiver no canvas (ex.: troca de tema durante o carregamento).
+    function createChart(canvas, config) {
+        const existing = Chart.getChart(canvas);
+        if (existing) existing.destroy();
+        return new Chart(canvas, config);
     }
 
     function register(chart) {
@@ -104,7 +138,7 @@
             }
         };
 
-        register(new Chart(canvas, {
+        register(createChart(canvas, {
             type: "bar",
             data: {
                 labels: trend.labels,
@@ -137,6 +171,7 @@
                 label: RISK_LABELS[level],
                 data: rows.filter((row) => row.risk_level === level).map((row) => ({ x: row.progress, y: row.burn_rate, project: row.project })),
                 backgroundColor: RISK_COLORS[level],
+                pointStyle: RISK_SHAPES[level],
                 pointRadius: 7,
                 pointHoverRadius: 9,
                 clip: false
@@ -166,7 +201,7 @@
             }
         };
 
-        register(new Chart(canvas, { type: "scatter", data: { datasets: datasets }, options: options }));
+        register(createChart(canvas, { type: "scatter", data: { datasets: datasets }, options: options }));
 
         const atRisk = rows.filter((row) => row.risk_level === "high").map((row) => row.project);
         describe(canvas, `Risco de ${rows.length} projetos. ${atRisk.length ? "Em risco: " + atRisk.join(", ") + "." : "Nenhum projeto em risco."} Detalhes na tabela abaixo do gráfico.`);
@@ -198,7 +233,7 @@
             }
         };
 
-        register(new Chart(canvas, {
+        register(createChart(canvas, {
             type: "bar",
             data: {
                 labels: top.map((row) => row.project),
@@ -236,7 +271,7 @@
             }
         };
 
-        register(new Chart(canvas, {
+        register(createChart(canvas, {
             type: "bar",
             data: {
                 labels: rows.map((row) => row.name),
@@ -272,7 +307,7 @@
             }
         };
 
-        register(new Chart(canvas, {
+        register(createChart(canvas, {
             type: "bar",
             data: {
                 labels: rows.map((row) => row.client),
@@ -311,7 +346,7 @@
             return;
         }
         Chart.defaults.font.family = "Inter, system-ui, sans-serif";
-        Chart.defaults.color = "#5f6c8c";
+        applyTheme();
 
         try {
             const response = await fetch(root.dataset.apiUrl, {
@@ -343,6 +378,10 @@
     }
 
     // O Chart.js não redimensiona sozinho para a área de impressão.
+    document.addEventListener("fcn:themechange", () => {
+        charts.splice(0).forEach((chart) => chart.destroy());
+        init();
+    });
     window.addEventListener("beforeprint", resizeAll);
     window.addEventListener("afterprint", resizeAll);
 

@@ -18,7 +18,8 @@ from django.views.decorators.http import require_http_methods
 from .analytics import build_analytics_payload, parse_analytics_filters
 from .forms import TimesheetForm
 from .models import Project, Task, Timesheet, UserRole
-from .services import get_role_dashboard_context
+from .services import get_personal_weekly_hours, get_role_dashboard_context, get_user_hours_snapshot
+from .templatetags.formatting import format_number
 
 
 def _json_error(message: str, errors: dict | None = None, status: int = 400) -> JsonResponse:
@@ -61,6 +62,7 @@ def api_timesheet_create_view(request: HttpRequest) -> JsonResponse:
 
     entry = form.save()
     user_name = entry.user.get_full_name() or entry.user.username
+    snapshot = get_user_hours_snapshot(request.user)
 
     return JsonResponse(
         {
@@ -72,9 +74,15 @@ def api_timesheet_create_view(request: HttpRequest) -> JsonResponse:
                 "project": entry.task.project.name,
                 "task": entry.task.name,
                 "date": entry.date.strftime("%d/%m/%Y"),
-                "hours_worked": f"{entry.hours_worked:.2f}".replace(".", ","),
+                "hours_worked": format_number(entry.hours_worked, 2),
                 "is_billable": entry.is_billable,
                 "description": entry.description,
+            },
+            "totals": {
+                "today_hours": format_number(snapshot["today_hours"], 1),
+                "week_hours": format_number(snapshot["week_hours"], 1),
+                "week_target": format_number(snapshot["week_target"], 0),
+                "week_progress": float(snapshot["week_progress"]),
             },
         },
         status=201,
@@ -119,29 +127,44 @@ def api_task_request_completion_view(request: HttpRequest, task_id: int) -> Json
 @login_required
 @require_http_methods(["GET"])
 def api_dashboard_metrics_view(request: HttpRequest) -> JsonResponse:
-    """Retorna métricas consolidadas em JSON para renderização dinâmica no frontend (Chart.js)."""
+    """Retorna métricas do dashboard em JSON para os gráficos (Chart.js).
+
+    - Gestão: billability da carteira e burn rate/margem por projeto.
+    - Consultor: apenas os próprios números (billability dos últimos 30 dias,
+      horas da semana e série das últimas 8 semanas). Dados financeiros da
+      carteira não são enviados para esse perfil.
+    """
     context = get_role_dashboard_context(request.user)
-    summary = context.get("summary", {})
-    projects = context.get("projects", [])
 
     if request.user.role == UserRole.CONSULTANT:
-        personal = context.get("personal_summary", {})
-        billability_val = float(personal.get("billability", 0))
-        total_hours = float(personal.get("total_hours", 0))
-        billable_hours = float(personal.get("billable_hours", 0))
-        non_billable_hours = max(0.0, total_hours - billable_hours)
-    else:
-        billability_val = float(summary.get("billability", 0))
-        total_hours = float(summary.get("total_hours", 0))
-        billable_hours = float(summary.get("total_billable_hours", 0))
-        non_billable_hours = max(0.0, total_hours - billable_hours)
+        recent = context["personal_recent"]
+        snapshot = context["hours_snapshot"]
+        total_hours = float(recent["total_hours"])
+        billable_hours = float(recent["billable_hours"])
+        billability_val = float(recent["billability"])
+        return JsonResponse(
+            {
+                "success": True,
+                "role": request.user.role,
+                "metrics": {
+                    "billability_rate": str(recent["billability"]),
+                    "week_hours": float(snapshot["week_hours"]),
+                    "week_target": float(snapshot["week_target"]),
+                    "today_hours": float(snapshot["today_hours"]),
+                },
+                "charts": {
+                    "billability": _billability_chart(billability_val, billable_hours, total_hours),
+                    "weekly_hours": get_personal_weekly_hours(request.user),
+                },
+            },
+            status=200,
+        )
 
-    non_billable_percent = max(0.0, round(100.0 - billability_val, 2)) if total_hours > 0 else 0.0
-
-    project_labels = [row["project"].name for row in projects]
-    burn_rates = [float(row["burn_rate"]) for row in projects]
-    profit_margins = [float(row["profit_margin"]) for row in projects]
-    health_statuses = [row["health"] for row in projects]
+    summary = context.get("summary", {})
+    projects = context.get("projects", [])
+    total_hours = float(summary.get("total_hours", 0))
+    billable_hours = float(summary.get("total_billable_hours", 0))
+    billability_val = float(summary.get("billability", 0))
 
     return JsonResponse(
         {
@@ -155,23 +178,28 @@ def api_dashboard_metrics_view(request: HttpRequest) -> JsonResponse:
                 "consultants_count": context.get("consultants_count", 0),
             },
             "charts": {
-                "billability": {
-                    "billable_percent": billability_val,
-                    "non_billable_percent": non_billable_percent,
-                    "billable_hours": billable_hours,
-                    "non_billable_hours": non_billable_hours,
-                    "total_hours": total_hours,
-                },
+                "billability": _billability_chart(billability_val, billable_hours, total_hours),
                 "projects_burn_rate": {
-                    "labels": project_labels,
-                    "burn_rates": burn_rates,
-                    "profit_margins": profit_margins,
-                    "health_statuses": health_statuses,
+                    "labels": [row["project"].name for row in projects],
+                    "burn_rates": [float(row["burn_rate"]) for row in projects],
+                    "profit_margins": [float(row["profit_margin"]) for row in projects],
+                    "health_statuses": [row["health"] for row in projects],
                 },
             },
         },
         status=200,
     )
+
+
+def _billability_chart(billability: float, billable_hours: float, total_hours: float) -> dict[str, float]:
+    non_billable_hours = max(0.0, total_hours - billable_hours)
+    return {
+        "billable_percent": billability,
+        "non_billable_percent": max(0.0, round(100.0 - billability, 2)) if total_hours > 0 else 0.0,
+        "billable_hours": billable_hours,
+        "non_billable_hours": non_billable_hours,
+        "total_hours": total_hours,
+    }
 
 
 @login_required

@@ -1,0 +1,242 @@
+{% comment %}
+Blocos de gráficos + tabelas da análise gerencial.
+Usado pela tela de Análises (print_mode=False: tabela recolhida em <details>)
+e pelo relatório para PDF (print_mode=True: tabela sempre visível).
+Os gráficos são desenhados por static/js/analytics-charts.js a partir da API.
+{% endcomment %}
+<section class="analytics-charts" aria-label="Gráficos e tabelas da análise gerencial">
+
+    <article class="chart-card analytics-wide" aria-labelledby="trend-title">
+        <header class="chart-header">
+            <span class="eyebrow">Evolução no tempo · respeita o período</span>
+            <h3 id="trend-title">Horas lançadas por {% if analytics.hours_trend.granularity == "month" %}mês{% else %}semana{% endif %}</h3>
+            <p>Horas faturáveis e não faturáveis em cada período, com a linha de billability.</p>
+        </header>
+        <div class="chart-canvas-wrapper chart-tall">
+            <canvas id="chart-hours-trend" role="img" aria-label="Gráfico de horas lançadas ao longo do tempo"></canvas>
+        </div>
+        {% if print_mode %}<div class="report-table">{% else %}<details class="chart-data"><summary>Ver dados em tabela</summary>{% endif %}
+            <div class="table-wrapper">
+                <table>
+                    <caption class="sr-only">Horas lançadas por período</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">Período</th>
+                            <th scope="col">Faturáveis (h)</th>
+                            <th scope="col">Não faturáveis (h)</th>
+                            <th scope="col">Billability</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in analytics.hours_trend.rows %}
+                        <tr>
+                            <td data-label="Período">{{ row.label }}</td>
+                            <td data-label="Faturáveis (h)">{{ row.billable_hours|floatformat:1 }}</td>
+                            <td data-label="Não faturáveis (h)">{{ row.non_billable_hours|floatformat:1 }}</td>
+                            <td data-label="Billability">{{ row.billability|floatformat:1 }}%</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="4">Nenhum lançamento no período escolhido.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% if print_mode %}</div>{% else %}</details>{% endif %}
+    </article>
+
+    <article class="chart-card" aria-labelledby="risk-title">
+        <header class="chart-header">
+            <span class="eyebrow">Projetos em risco · histórico completo</span>
+            <h3 id="risk-title">Orçamento consumido x tarefas concluídas</h3>
+            <p>Projetos acima da linha tracejada gastaram mais orçamento do que entregaram.</p>
+        </header>
+        <div class="chart-canvas-wrapper">
+            <canvas id="chart-project-risk" role="img" aria-label="Gráfico de dispersão de risco dos projetos"></canvas>
+        </div>
+        {% if print_mode %}<div class="report-table">{% else %}<details class="chart-data"><summary>Ver dados em tabela</summary>{% endif %}
+            <div class="table-wrapper">
+                <table>
+                    <caption class="sr-only">Risco dos projetos</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">Projeto</th>
+                            <th scope="col">Orçamento consumido</th>
+                            <th scope="col">Tarefas concluídas</th>
+                            <th scope="col">Diferença</th>
+                            <th scope="col">Situação</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in analytics.project_risk %}
+                        <tr>
+                            <td data-label="Projeto">{{ row.project }}<br><small class="muted-text">{{ row.client }}</small></td>
+                            <td data-label="Orçamento consumido">{{ row.burn_rate|floatformat:1 }}%</td>
+                            <td data-label="Tarefas concluídas">{{ row.progress|floatformat:1 }}% ({{ row.completed_tasks }}/{{ row.total_tasks }})</td>
+                            <td data-label="Diferença">{{ row.gap|floatformat:1 }} p.p.</td>
+                            <td data-label="Situação"><span class="risk-badge risk-{{ row.risk_level }}">{{ row.risk_label }}</span></td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="5">Nenhum projeto ativo para os filtros escolhidos.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% if print_mode %}</div>{% else %}</details>{% endif %}
+    </article>
+
+    <article class="chart-card" aria-labelledby="estimate-title">
+        <header class="chart-header">
+            <span class="eyebrow">Estimativa · histórico completo</span>
+            <h3 id="estimate-title">Horas estimadas x realizadas por projeto</h3>
+            <p>Mostra onde as estimativas das tarefas estão sendo estouradas.</p>
+        </header>
+        <div class="chart-canvas-wrapper">
+            <canvas id="chart-estimate-actual" role="img" aria-label="Gráfico de horas estimadas e realizadas por projeto"></canvas>
+        </div>
+        {% if print_mode %}<div class="report-table">{% else %}<details class="chart-data"><summary>Ver dados em tabela</summary>{% endif %}
+            <div class="table-wrapper">
+                <table>
+                    <caption class="sr-only">Horas estimadas e realizadas por projeto</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">Projeto</th>
+                            <th scope="col">Estimado (h)</th>
+                            <th scope="col">Realizado (h)</th>
+                            <th scope="col">Variação</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in analytics.estimate_vs_actual %}
+                        <tr>
+                            <td data-label="Projeto">{{ row.project }}</td>
+                            <td data-label="Estimado (h)">{{ row.estimated_hours|floatformat:1 }}</td>
+                            <td data-label="Realizado (h)">{{ row.actual_hours|floatformat:1 }}</td>
+                            <td data-label="Variação">{% if row.variance_percent is None %}{{ row.status }}{% else %}{{ row.variance_percent|floatformat:1 }}% · {{ row.status }}{% endif %}</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="4">Nenhuma tarefa com estimativa ou horas lançadas.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% if print_mode %}</div>{% else %}</details>{% endif %}
+    </article>
+
+    <article class="chart-card" aria-labelledby="team-title">
+        <header class="chart-header">
+            <span class="eyebrow">Equipe · respeita o período</span>
+            <h3 id="team-title">Carga de horas por pessoa</h3>
+            <p>Ajuda a identificar sobrecarga, ociosidade e baixa billability.</p>
+        </header>
+        <div class="chart-canvas-wrapper chart-tall">
+            <canvas id="chart-team-load" role="img" aria-label="Gráfico de horas por pessoa"></canvas>
+        </div>
+        {% if print_mode %}<div class="report-table">{% else %}<details class="chart-data"><summary>Ver dados em tabela</summary>{% endif %}
+            <div class="table-wrapper">
+                <table>
+                    <caption class="sr-only">Horas por pessoa no período</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">Pessoa</th>
+                            <th scope="col">Total (h)</th>
+                            <th scope="col">Faturáveis (h)</th>
+                            <th scope="col">Billability</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in analytics.team_load %}
+                        <tr>
+                            <td data-label="Pessoa">{{ row.name }}<br><small class="muted-text">{{ row.role }}</small></td>
+                            <td data-label="Total (h)">{{ row.total_hours|floatformat:1 }}</td>
+                            <td data-label="Faturáveis (h)">{{ row.billable_hours|floatformat:1 }}</td>
+                            <td data-label="Billability">{{ row.billability|floatformat:1 }}%</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="4">Nenhuma hora lançada no período escolhido.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% if print_mode %}</div>{% else %}</details>{% endif %}
+    </article>
+
+    <article class="chart-card" aria-labelledby="client-title">
+        <header class="chart-header">
+            <span class="eyebrow">Rentabilidade · histórico completo</span>
+            <h3 id="client-title">Orçamento x custo interno por cliente</h3>
+            <p>Custo interno = horas lançadas × custo/hora de cada pessoa.</p>
+        </header>
+        <div class="chart-canvas-wrapper">
+            <canvas id="chart-client-profit" role="img" aria-label="Gráfico de orçamento e custo interno por cliente"></canvas>
+        </div>
+        {% if print_mode %}<div class="report-table">{% else %}<details class="chart-data"><summary>Ver dados em tabela</summary>{% endif %}
+            <div class="table-wrapper">
+                <table>
+                    <caption class="sr-only">Orçamento e custo interno por cliente</caption>
+                    <thead>
+                        <tr>
+                            <th scope="col">Cliente</th>
+                            <th scope="col">Orçamento</th>
+                            <th scope="col">Custo interno</th>
+                            <th scope="col">Margem</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for row in analytics.client_profitability %}
+                        <tr>
+                            <td data-label="Cliente">{{ row.client }}<br><small class="muted-text">{{ row.projects }} projeto{{ row.projects|pluralize }}</small></td>
+                            <td data-label="Orçamento">R$ {{ row.budget|floatformat:"2g" }}</td>
+                            <td data-label="Custo interno">R$ {{ row.internal_cost|floatformat:"2g" }}</td>
+                            <td data-label="Margem">{{ row.margin_percent|floatformat:1 }}%</td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="4">Nenhum cliente para os filtros escolhidos.</td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% if print_mode %}</div>{% else %}</details>{% endif %}
+    </article>
+
+    <article class="chart-card analytics-wide" aria-labelledby="validation-title">
+        <header class="chart-header">
+            <span class="eyebrow">Fluxo de validação</span>
+            <h3 id="validation-title">Tarefas aguardando aprovação da gestão</h3>
+            <p>
+                {% if analytics.validation.average_lead_time_days is None %}
+                    Nenhuma validação concluída no período.
+                {% else %}
+                    Tempo médio entre o pedido e a aprovação:
+                    {% if analytics.validation.average_lead_time_days < 1 %}{{ analytics.validation.average_lead_time_hours|floatformat:1 }}h{% else %}{{ analytics.validation.average_lead_time_days|floatformat:1 }} dia{{ analytics.validation.average_lead_time_days|pluralize }}{% endif %} ({{ analytics.validation.validated_count }} validaç{{ analytics.validation.validated_count|pluralize:"ão,ões" }} no período).
+                {% endif %}
+            </p>
+        </header>
+        <div class="table-wrapper">
+            <table>
+                <caption class="sr-only">Tarefas aguardando validação, das mais antigas para as mais recentes</caption>
+                <thead>
+                    <tr>
+                        <th scope="col">Tarefa</th>
+                        <th scope="col">Projeto</th>
+                        <th scope="col">Responsável</th>
+                        <th scope="col">Pedido em</th>
+                        <th scope="col">Aguardando</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for row in analytics.validation.pending %}
+                    <tr>
+                        <td data-label="Tarefa">{{ row.task }}</td>
+                        <td data-label="Projeto">{{ row.project }}</td>
+                        <td data-label="Responsável">{{ row.consultant }}</td>
+                        <td data-label="Pedido em">{{ row.requested_at }}</td>
+                        <td data-label="Aguardando">{{ row.waiting_days|floatformat:1 }} dia{{ row.waiting_days|pluralize }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5">Nenhuma tarefa aguardando validação.</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </article>
+</section>

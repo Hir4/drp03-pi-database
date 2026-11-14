@@ -15,6 +15,7 @@ from django.http import HttpRequest, JsonResponse
 from django.shortcuts import get_object_or_404
 from django.views.decorators.http import require_http_methods
 
+from .analytics import build_analytics_payload, parse_analytics_filters
 from .forms import TimesheetForm
 from .models import Project, Task, Timesheet, UserRole
 from .services import get_role_dashboard_context
@@ -171,3 +172,19 @@ def api_dashboard_metrics_view(request: HttpRequest) -> JsonResponse:
         },
         status=200,
     )
+
+
+@login_required
+@require_http_methods(["GET"])
+def api_analytics_view(request: HttpRequest) -> JsonResponse:
+    """Retorna a análise gerencial completa em JSON (gráficos da tela de Análises e do relatório).
+
+    Filtros opcionais na querystring: ``start`` e ``end`` (AAAA-MM-DD),
+    ``client`` (id do contrato) e ``manager`` (id do gerente).
+    Disponível apenas para administradores e gerentes.
+    """
+    if request.user.role not in {UserRole.ADMIN, UserRole.MANAGER}:
+        return _json_error("Seu perfil não possui acesso às análises gerenciais.", status=403)
+
+    filters = parse_analytics_filters(request.GET)
+    return JsonResponse({"success": True, **build_analytics_payload(filters)}, status=200)

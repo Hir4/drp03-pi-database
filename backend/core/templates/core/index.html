@@ -52,6 +52,13 @@
     </article>
 </section>
 
+{% if dashboard_role != 'CONSULTANT' %}
+<section class="analytics-toolbar" aria-label="Atalho para a análise gerencial">
+    <p class="analytics-scope">Quer ver tendências, projetos em risco, carga da equipe e rentabilidade por cliente?</p>
+    <a class="button-link" href="{% url 'core:analytics' %}">Abrir análise completa</a>
+</section>
+{% endif %}
+
 {% if dashboard_role == 'CONSULTANT' %}
 <section class="panel workflow-highlight-panel" aria-labelledby="workflow-guide-title">
     {% include "core/components/panel_header.html" with eyebrow="Workflow da entrega" title="Como suas tarefas avançam até a conclusão" %}

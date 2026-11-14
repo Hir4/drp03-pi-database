@@ -1,0 +1,175 @@
+/* ==============================================================================
+   Relatório de Análise Gerencial — layout de leitura e de impressão (PDF)
+   ============================================================================== */
+
+@page {
+    size: A4;
+    margin: 14mm 12mm;
+}
+
+.report-body {
+    background: var(--bg);
+}
+
+.report-toolbar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.85rem 1.5rem;
+    background: var(--surface);
+    border-bottom: 1px solid var(--line);
+}
+
+.report-toolbar p {
+    margin: 0;
+}
+
+.report-page {
+    max-width: 1100px;
+    margin: 1.5rem auto 3rem;
+    padding: 2rem;
+    background: var(--surface);
+    border-radius: 18px;
+    box-shadow: var(--shadow-soft);
+}
+
+.report-header {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    gap: 1.5rem;
+    padding-bottom: 1.25rem;
+    margin-bottom: 1.25rem;
+    border-bottom: 2px solid var(--primary);
+}
+
+.report-header h1 {
+    margin: 0.25rem 0 0;
+    font-size: 1.6rem;
+}
+
+.report-meta {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, auto));
+    gap: 0.35rem 1.5rem;
+    margin: 0;
+    font-size: 0.9rem;
+}
+
+.report-meta dt {
+    font-weight: 700;
+    color: var(--muted);
+}
+
+.report-meta dd {
+    margin: 0;
+}
+
+.report-table {
+    margin-top: 1rem;
+}
+
+/* O relatório é um documento: mantém tabelas tradicionais mesmo em larguras
+   estreitas (a folha A4 cai no breakpoint mobile do app.css). */
+.report-page .table-wrapper {
+    border: 1px solid var(--line);
+    background: var(--surface);
+}
+
+.report-page .table-wrapper table {
+    display: table;
+    width: 100%;
+    font-size: 0.85rem;
+}
+
+.report-page .table-wrapper thead {
+    display: table-header-group;
+}
+
+.report-page .table-wrapper tbody {
+    display: table-row-group;
+}
+
+.report-page .table-wrapper tr {
+    display: table-row;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+.report-page .table-wrapper th,
+.report-page .table-wrapper td {
+    display: table-cell;
+    width: auto;
+    padding: 0.45rem 0.6rem;
+    text-align: left;
+}
+
+.report-page .table-wrapper td::before {
+    content: none;
+}
+
+.report-footer {
+    margin-top: 1.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--line);
+    font-size: 0.82rem;
+    color: var(--muted);
+}
+
+@media print {
+    .no-print {
+        display: none !important;
+    }
+
+    .report-body {
+        background: #fff;
+    }
+
+    .report-page {
+        max-width: none;
+        margin: 0;
+        padding: 0;
+        border-radius: 0;
+        box-shadow: none;
+    }
+
+    .metric-card,
+    .chart-card {
+        box-shadow: none !important;
+        transform: none !important;
+    }
+
+    .analytics-kpis {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    /* No papel, um gráfico por linha fica legível e evita cortes. */
+    .analytics-charts {
+        grid-template-columns: 1fr;
+    }
+
+    .chart-card,
+    .metric-card,
+    tr {
+        break-inside: avoid;
+        page-break-inside: avoid;
+    }
+
+    .chart-card {
+        break-before: auto;
+    }
+
+    .table-wrapper {
+        overflow: visible !important;
+    }
+
+    a {
+        color: inherit;
+        text-decoration: none;
+    }
+}

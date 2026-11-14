@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Relatório de Análise Gerencial | FCN TI</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap">
+    <link rel="stylesheet" href="/static/css/app.css?v=2.1">
+    <link rel="stylesheet" href="/static/css/report.css?v=1.0">
+</head>
+<body class="report-body">
+    <div class="report-toolbar no-print" role="region" aria-label="Ações do relatório">
+        <a href="{% url 'core:analytics' %}{% if analytics_querystring %}?{{ analytics_querystring }}{% endif %}" class="secondary-link">Voltar para Análises</a>
+        <button type="button" id="report-print-button" class="small-button">Salvar como PDF</button>
+        <p class="muted-text">Na janela de impressão, escolha <strong>Salvar como PDF</strong> como destino.</p>
+    </div>
+
+    <main id="analytics-root" class="report-page" data-api-url="{{ analytics_api_url }}" data-report="1" data-autoprint="{% if autoprint %}1{% else %}0{% endif %}">
+        <header class="report-header">
+            <div>
+                <p class="eyebrow">FCN TI · Plataforma de Gestão Integrada</p>
+                <h1>Relatório de Análise Gerencial</h1>
+            </div>
+            <dl class="report-meta">
+                <div><dt>Período</dt><dd>{{ analytics.filters.period }}</dd></div>
+                <div><dt>Cliente</dt><dd>{{ analytics.filters.client }}</dd></div>
+                <div><dt>Gerente</dt><dd>{{ analytics.filters.manager }}</dd></div>
+                <div><dt>Gerado em</dt><dd>{{ generated_at|date:"d/m/Y \à\s H:i" }} por {{ generated_by }}</dd></div>
+            </dl>
+        </header>
+
+        {% include "core/components/analytics_kpis.html" %}
+        {% include "core/components/analytics_sections.html" with print_mode=True %}
+
+        <footer class="report-footer">
+            Relatório gerado automaticamente pela plataforma FCN TI. Horas, carga da equipe e validações concluídas
+            respeitam o período escolhido; estimativas, risco e rentabilidade consideram todo o histórico dos projetos.
+        </footer>
+    </main>
+
+    <script src="/static/js/chart.umd.min.js"></script>
+    <script src="/static/js/analytics-charts.js?v=1.1"></script>
+</body>
+</html>

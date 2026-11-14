@@ -1,11 +1,15 @@
 """Views do app principal, incluindo autenticação de entrada e páginas do MVP."""
 
+from urllib.parse import urlencode
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.http import HttpRequest, HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
+from django.utils import timezone
 
+from .analytics import build_analytics_payload, parse_analytics_filters
 from .forms import (
     ProjectManagementForm,
     ProjectUpdateForm,
@@ -35,6 +39,12 @@ def _build_navigation(request: HttpRequest) -> list[dict[str, str | bool]]:
             "url": reverse("core:dashboard"),
             "page": "dashboard",
             "visible": True,
+        },
+        {
+            "label": "Análises",
+            "url": reverse("core:analytics"),
+            "page": "analytics",
+            "visible": _is_management_user(request),
         },
         {
             "label": "Projetos",
@@ -132,6 +142,50 @@ def dashboard_view(request: HttpRequest) -> HttpResponse:
     context = get_role_dashboard_context(request.user)
     context.update(_base_context(request, "dashboard", "Dashboard"))
     return render(request, "core/index.html", context)
+
+
+def _analytics_context(request: HttpRequest) -> dict[str, object]:
+    """Contexto comum da tela de Análises e do relatório para exportação."""
+    filters = parse_analytics_filters(request.GET)
+    query_params = filters.as_query_params()
+    querystring = urlencode(query_params)
+    options = get_management_filter_options()
+    return {
+        "analytics": build_analytics_payload(filters),
+        "analytics_filters": {key: query_params.get(key, "") for key in ("start", "end", "client", "manager")},
+        "analytics_querystring": querystring,
+        "analytics_api_url": reverse("core:api_analytics") + (f"?{querystring}" if querystring else ""),
+        "clients": options["clients"],
+        "managers": options["managers"],
+    }
+
+
+@login_required
+def analytics_view(request: HttpRequest) -> HttpResponse:
+    """Tela de análise gerencial com filtros, gráficos e tabelas acessíveis."""
+    redirect_response = _ensure_management_access(request)
+    if redirect_response is not None:
+        return redirect_response
+    context = _analytics_context(request)
+    context.update(_base_context(request, "analytics", "Análises Gerenciais"))
+    return render(request, "core/analytics.html", context)
+
+
+@login_required
+def analytics_report_view(request: HttpRequest) -> HttpResponse:
+    """Versão do relatório formatada para impressão e para salvar em PDF pelo navegador."""
+    redirect_response = _ensure_management_access(request)
+    if redirect_response is not None:
+        return redirect_response
+    context = _analytics_context(request)
+    context.update(
+        {
+            "generated_at": timezone.localtime(),
+            "generated_by": request.user.get_full_name() or request.user.username,
+            "autoprint": request.GET.get("autoprint") == "1",
+        }
+    )
+    return render(request, "core/analytics_report.html", context)
 
 
 @login_required

@@ -1210,3 +1210,108 @@ button:hover {
         height: 240px;
     }
 }
+
+/* ==============================================================================
+   Tela de Análises Gerenciais (gráficos, tabelas acessíveis e exportação)
+   ============================================================================== */
+.analytics-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    margin: 1.25rem 0;
+}
+
+.analytics-scope {
+    margin: 0;
+    color: var(--muted);
+}
+
+.button-link {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.75rem 1.2rem;
+    border-radius: 12px;
+    background: var(--primary);
+    color: #fff;
+    font-weight: 700;
+    text-decoration: none;
+    transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.button-link:hover {
+    background: var(--primary-deep);
+    box-shadow: 0 10px 22px rgba(41, 82, 227, 0.24);
+}
+
+.analytics-kpis {
+    margin-bottom: 0.5rem;
+}
+
+.analytics-charts {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 1.5rem;
+    margin: 1.5rem 0 2rem;
+}
+
+.analytics-wide {
+    grid-column: 1 / -1;
+}
+
+.chart-canvas-wrapper.chart-tall {
+    height: 340px;
+}
+
+.chart-fallback-message {
+    text-align: center;
+    padding: 2rem 1rem;
+}
+
+.chart-data {
+    margin-top: 1rem;
+    border-top: 1px solid var(--line);
+    padding-top: 0.75rem;
+}
+
+.chart-data summary {
+    cursor: pointer;
+    font-weight: 600;
+    color: var(--primary-deep);
+    width: fit-content;
+}
+
+.chart-data[open] summary {
+    margin-bottom: 0.75rem;
+}
+
+.risk-badge {
+    display: inline-block;
+    padding: 0.25rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.risk-badge.risk-high {
+    background: #fde8ec;
+    color: #9b1c33;
+}
+
+.risk-badge.risk-warning {
+    background: #fdf1dc;
+    color: #7a4f00;
+}
+
+.risk-badge.risk-ok {
+    background: #e3f5ec;
+    color: #146c46;
+}
+
+@media (max-width: 960px) {
+    .analytics-charts {
+        grid-template-columns: 1fr;
+    }
+}

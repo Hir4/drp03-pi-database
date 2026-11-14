@@ -521,6 +521,14 @@ class Command(BaseCommand):
 
         tasks["task_1"].validate_completion(validated_by=users["marina"])
         tasks["task_5"].validate_completion(validated_by=users["rodrigo"])
+        # Datas realistas de pedido e aprovação para alimentar o tempo médio de validação.
+        for task_key, requested_at, validated_at in (
+            ("task_1", datetime(2026, 4, 14, 17, 40), datetime(2026, 4, 16, 9, 10)),
+            ("task_5", datetime(2026, 4, 28, 11, 5), datetime(2026, 4, 29, 15, 30)),
+        ):
+            tasks[task_key].completion_requested_at = timezone.make_aware(requested_at)
+            tasks[task_key].completion_validated_at = timezone.make_aware(validated_at)
+            tasks[task_key].save(update_fields=("completion_requested_at", "completion_validated_at"))
         tasks["task_4b"].request_completion(requested_by=users["renata"])
         tasks["task_7"].request_completion(requested_by=users["larissa"])
         tasks["task_4b"].completion_requested_at = timezone.make_aware(datetime(2026, 5, 8, 14, 30))

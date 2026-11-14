@@ -4,11 +4,14 @@ from django.contrib.auth.views import LoginView, LogoutView
 from django.urls import path
 
 from .api import (
+    api_analytics_view,
     api_dashboard_metrics_view,
     api_task_request_completion_view,
     api_timesheet_create_view,
 )
 from .views import (
+    analytics_report_view,
+    analytics_view,
     dashboard_view,
     healthcheck_view,
     home_redirect_view,
@@ -43,6 +46,8 @@ urlpatterns = [
     ),
     path("logout/", LogoutView.as_view(), name="logout"),
     path("dashboard/", dashboard_view, name="dashboard"),
+    path("analytics/", analytics_view, name="analytics"),
+    path("analytics/report/", analytics_report_view, name="analytics_report"),
     path("projects/", projects_view, name="projects"),
     path("projects/create/", project_create_view, name="project_create"),
     path("projects/<int:project_id>/archive/", project_archive_view, name="project_archive"),
@@ -67,4 +72,5 @@ urlpatterns = [
         name="api_task_request_completion",
     ),
     path("api/v1/dashboard/metrics/", api_dashboard_metrics_view, name="api_dashboard_metrics"),
+    path("api/v1/analytics/", api_analytics_view, name="api_analytics"),
 ]

@@ -27,6 +27,7 @@ O Projeto Integrador 2 representa o salto de um protótipo estático monolítico
 | **Interatividade de Interface** | Recarregamento total da tela a cada formulário enviado (*síncrono*) | **JavaScript Assíncrono (`fetch`)**: dados salvos em segundo plano com feedback visual instantâneo |
 | **Acessibilidade Universal** | Interface padrão sem conformidade assistiva | **WCAG 2.1 AA**: atalho *Skip Link*, suporte a leitores de tela e navegação 100% por teclado |
 | **Arquitetura de Dados** | Backend retornava exclusivamente HTML | **APIs REST (JSON)** para integração com frontend dinâmico e serviços externos |
+| **Análise Gerencial** | Indicadores apenas em números soltos no dashboard | **Tela de Análises com 5 gráficos (Chart.js)**, filtros por período/cliente/gerente, tabelas acessíveis e **relatório exportável em PDF** |
 | **Garantia de Qualidade** | Testes manuais pontuais | Suíte de **testes automatizados de API e regressão** com pipeline de **CI/CD (GitHub Actions)** |
 | **Gestão de Dependências** | `requirements.txt` básico | **Poetry** com trava de versões criptográfica (`poetry.lock`) e separação produção/dev |
 
@@ -61,6 +62,7 @@ docker compose up --build
 Quando o terminal indicar que o servidor subiu, basta acessar pelo navegador:
 * 🌐 **Aplicação Web:** [http://localhost:8000/](http://localhost:8000/)
 * 📊 **Dashboard:** [http://localhost:8000/dashboard/](http://localhost:8000/dashboard/)
+* 📈 **Análises Gerenciais:** [http://localhost:8000/analytics/](http://localhost:8000/analytics/) *(administradores e gerentes)*
 * ⏱️ **Registro de Horas:** [http://localhost:8000/timesheet/](http://localhost:8000/timesheet/)
 * ⚙️ **Painel Administrativo:** [http://localhost:8000/admin/](http://localhost:8000/admin/)
 
@@ -97,6 +99,24 @@ Se você for testar a aplicação para a apresentação ou conferir as alteraç�
 3. **O que observar:**
    * A requisição é enviada assincronamente via API;
    * O status da tarefa muda em tempo real para **"Em validação"** sem recarregar o dashboard.
+
+### 4. Testando as Análises Gerenciais e o Relatório em PDF
+1. Faça login como gerente: **Usuário:** `marina.pm` | **Senha:** `manager123`;
+2. Clique em **Análises** no menu lateral (o item não aparece para consultores);
+3. **O que observar:**
+   * Seis indicadores no topo: horas no período, billability, custo interno, projetos em risco, tempo médio de validação e validações pendentes;
+   * Cinco gráficos carregados de forma assíncrona pela API `/api/v1/analytics/`:
+     * **Horas por semana/mês** (faturáveis x não faturáveis, com a linha de billability);
+     * **Projetos em risco** (orçamento consumido x tarefas concluídas; acima da linha tracejada = gastando mais do que entrega);
+     * **Horas estimadas x realizadas** por projeto (estouros em vermelho);
+     * **Carga de horas por pessoa** (sobrecarga, ociosidade e billability individual);
+     * **Orçamento x custo interno por cliente** (margens abaixo de 25% em vermelho);
+   * Abaixo de cada gráfico, o botão **"Ver dados em tabela"** mostra os mesmos números em tabela (acessível a leitores de tela);
+   * A tabela de **tarefas aguardando aprovação**, das mais antigas para as mais recentes.
+4. Use os filtros de **data inicial/final, cliente e gerente** e clique em **"Aplicar filtros"**: indicadores, gráficos e tabelas são recalculados para o recorte;
+5. Clique em **"Exportar relatório (PDF)"**: abre uma nova aba com o relatório formatado em A4 e a janela de impressão; escolha **"Salvar como PDF"** como destino.
+
+> ℹ️ **Regra de período:** horas no tempo, carga da equipe e validações concluídas respeitam as datas filtradas. Estimado x realizado, risco dos projetos e rentabilidade por cliente consideram todo o histórico, porque orçamento e estimativas não são distribuídos ao longo do tempo. Tarefas concluídas diretamente pela gestão (sem pedido do consultor) não entram no tempo médio de validação.
 
 ---
 
@@ -216,8 +236,11 @@ sequenceDiagram
 | `POST` | `/api/v1/timesheet/` | `timesheet.js` | 201, 400 |
 | `POST` | `/api/v1/tasks/<id>/request-completion/` | `workflow.js` | 200, 400, 403, 404 |
 | `GET` | `/api/v1/dashboard/metrics/` | integrações / dashboards | 200 |
+| `GET` | `/api/v1/analytics/?start=&end=&client=&manager=` | `analytics-charts.js` (tela de Análises e relatório PDF) | 200, 403 |
 
-As demais rotas (`/dashboard/`, `/projects/`, `/tasks/...`, `/talent-bank/`) seguem o modelo tradicional: formulário síncrono → HTML renderizado → redirect. A rota `/health/` responde JSON para verificação de disponibilidade.
+Os cálculos da análise gerencial ficam centralizados em `core/analytics.py`, de modo que a tela `/analytics/`, o relatório `/analytics/report/` e a API mostram sempre os mesmos números.
+
+As demais rotas (`/dashboard/`, `/analytics/`, `/projects/`, `/tasks/...`, `/talent-bank/`) seguem o modelo tradicional: formulário síncrono → HTML renderizado → redirect. A rota `/health/` responde JSON para verificação de disponibilidade.
 
 ### 3. Pipeline de CI/CD
 
@@ -246,10 +269,11 @@ flowchart TB
 ├── .github/workflows/          # Automações de CI (Testes) e CD (Deploy na VPS)
 ├── backend/
 │   ├── config/                 # Configurações do Django (settings, wsgi, urls)
-│   ├── core/                   # Aplicação principal (models, views, api, forms)
+│   ├── core/                   # Aplicação principal (models, views, api, forms, analytics)
 │   ├── static/
 │   │   ├── css/app.css         # Folha de estilos e regras WCAG 2.1
-│   │   └── js/                 # Scripts assíncronos (api.js, timesheet.js, workflow.js)
+│   │   ├── css/report.css      # Layout de impressão do relatório em PDF (A4)
+│   │   └── js/                 # Scripts assíncronos (api.js, timesheet.js, workflow.js, analytics-charts.js)
 │   ├── Dockerfile              # Imagem do container da aplicação
 │   ├── entrypoint.sh           # Script de inicialização automática (migrações + mocks)
 │   └── pyproject.toml          # Gerenciamento moderno de dependências (Poetry)

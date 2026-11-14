@@ -174,6 +174,8 @@ Para atender à disciplina de **Arquitetura em Nuvem**, a aplicação foi implan
 
 O banco de dados já inicializa automaticamente populado com dados mockados realistas para simular a consultoria:
 
+> 🔐 As credenciais **não aparecem mais na tela de login**: esta tabela é a única fonte oficial dos usuários de teste.
+
 | Perfil | Usuário | Senha | O que pode ver e fazer |
 | :--- | :--- | :--- | :--- |
 | **Administrador** | `admin` | `admin123` | Acesso total à governança, portfólio, métricas financeiras e Django Admin |

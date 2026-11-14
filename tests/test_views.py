@@ -51,6 +51,13 @@ class DashboardAndHealthViewTests(TestCase):
 
         self.assertRedirects(response, reverse("core:dashboard"))
 
+    def test_login_page_does_not_expose_demo_credentials(self) -> None:
+        content = self.client.get(reverse("core:login")).content.decode("utf-8")
+
+        for secret in ("admin123", "manager123", "consultant123", "marina.pm", "caio.devops"):
+            self.assertNotIn(secret, content)
+        self.assertIn("documentação do projeto no GitHub", content)
+
     def test_login_page_renders_successfully(self) -> None:
         response = self.client.get(reverse("core:login"))
 

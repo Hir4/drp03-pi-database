@@ -144,6 +144,18 @@ O banco de dados já inicializa automaticamente populado com dados mockados real
 | **Consultor (DevOps)** | `caio.devops` | `consultant123` | Visualização da fila de trabalho individual e lançamento assíncrono de horas |
 | **Consultora (Dados)** | `julia.data` | `consultant123` | Apontamento de esforço em projetos de engenharia de dados |
 | **Consultor (Backend)** | `bruno.backend` | `consultant123` | Execução de tarefas técnicas com rastreamento de horas |
+| **Consultora (QA)** | `renata.qa` | `consultant123` | Planos de teste, homologação e testes de acessibilidade |
+| **Consultora (BI)** | `larissa.bi` | `consultant123` | Painéis gerenciais e previsão de demanda |
+| **Consultor (Cloud)** | `thiago.cloud` | `consultant123` | Migração para nuvem, capacidade e atualização de ambientes |
+| **Consultora (UX/UI)** | `aline.ux` | `consultant123` | Prototipação e desenvolvimento de interfaces |
+| **Consultor (Júnior)** | `pedro.jr` | `consultant123` | Sustentação, conciliações e catálogo de dados |
+
+**O que a massa de demonstração contém** (comando `seed_demo_data`, executado a cada deploy e idempotente):
+
+* **12 usuários** (1 admin, 2 gerentes, 9 consultores — um deles inativo), **10 competências** e **7 clientes**, sendo um contrato cancelado e um cliente novo iniciado em setembro;
+* **10 projetos e 39 tarefas** em estados variados: concluídas e aprovadas, aguardando validação (inclusive uma parada há semanas), em andamento, sem responsável e arquivadas;
+* **~670 lançamentos de horas de janeiro a 13/11/2026**, só em dias úteis, sem feriados nacionais e com no máximo 8h por pessoa por dia, gerados de forma determinística em `core/management/commands/_demo_history.py`;
+* Cenários prontos para a tela de Análises: **Rollout SAP Financeiro** crítico (orçamento estourado), **App do Paciente** em risco (gasto alto e pouco avanço), **Observabilidade Operacional** em atenção e os demais no ritmo, além de estouros de estimativa e diferenças de carga e billability entre as pessoas.
 
 ---
 

@@ -20,15 +20,20 @@ class TimesheetForm(forms.ModelForm):
             "description": "Descrição técnica",
         }
         widgets = {
-            "date": forms.DateInput(attrs={"type": "date"}),
+            # O <input type="date"> só aceita valor no formato ISO (AAAA-MM-DD).
+            "date": forms.DateInput(attrs={"type": "date"}, format="%Y-%m-%d"),
+            "hours_worked": forms.NumberInput(attrs={"step": "0.5", "min": "0.5", "max": "24", "inputmode": "decimal"}),
             "description": forms.Textarea(attrs={"rows": 4, "placeholder": "Descreva o escopo executado."}),
+        }
+        help_texts = {
+            "hours_worked": "Use meia hora como fração: 1,5 = 1h30.",
         }
 
     def __init__(self, *args, **kwargs) -> None:
         self.current_user: User | None = kwargs.pop("current_user", None)
         super().__init__(*args, **kwargs)
-        for field in self.fields.values():
-            field.widget.attrs.setdefault("class", "form-control")
+        for name, field in self.fields.items():
+            field.widget.attrs.setdefault("class", "form-check" if name == "is_billable" else "form-control")
 
         if self.current_user is None:
             return
@@ -41,8 +46,11 @@ class TimesheetForm(forms.ModelForm):
             self.fields["user"].initial = self.current_user.id
             self.fields["user"].required = False
             self.fields["user"].widget = forms.HiddenInput()
-            self.fields["task"].queryset = Task.objects.filter(assigned_to=self.current_user).select_related(
-                "project"
+            # Só tarefas ativas da pessoa, agrupáveis por projeto na lista.
+            self.fields["task"].queryset = (
+                Task.objects.filter(assigned_to=self.current_user, is_archived=False, project__is_archived=False)
+                .select_related("project")
+                .order_by("is_completed", "project__name", "name")
             )
 
     def clean(self) -> dict[str, object]:
@@ -80,6 +88,8 @@ class ProjectManagementForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs) -> None:
+        # IDs únicos na página (os quatro formulários de gestão convivem na tela).
+        kwargs.setdefault("auto_id", "new-project-%s")
         super().__init__(*args, **kwargs)
         self.fields["contract"].queryset = Contract.objects.filter(is_active=True).order_by("client_name", "start_date")
         self.fields["manager"].queryset = User.objects.filter(role=UserRole.MANAGER, is_active=True).order_by(
@@ -104,6 +114,8 @@ class TaskManagementForm(forms.ModelForm):
         }
 
     def __init__(self, *args, **kwargs) -> None:
+        # IDs únicos na página (os quatro formulários de gestão convivem na tela).
+        kwargs.setdefault("auto_id", "new-task-%s")
         super().__init__(*args, **kwargs)
         self.fields["project"].queryset = Project.objects.select_related("contract").filter(
             contract__is_active=True,
@@ -129,6 +141,8 @@ class ProjectUpdateForm(forms.Form):
     budget_allocated = forms.DecimalField(label="Orçamento alocado", max_digits=12, decimal_places=2)
 
     def __init__(self, *args, **kwargs) -> None:
+        # IDs únicos na página (os quatro formulários de gestão convivem na tela).
+        kwargs.setdefault("auto_id", "edit-project-%s")
         super().__init__(*args, **kwargs)
         self.fields["project"].queryset = Project.objects.select_related("contract").filter(
             contract__is_active=True,
@@ -160,6 +174,8 @@ class TaskUpdateForm(forms.Form):
     assigned_to = forms.ModelChoiceField(queryset=User.objects.none(), label="Responsável", required=False)
 
     def __init__(self, *args, **kwargs) -> None:
+        # IDs únicos na página (os quatro formulários de gestão convivem na tela).
+        kwargs.setdefault("auto_id", "edit-task-%s")
         super().__init__(*args, **kwargs)
         self.fields["task"].queryset = Task.objects.select_related("project", "project__contract").filter(
             is_archived=False,

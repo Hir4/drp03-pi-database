@@ -6,7 +6,9 @@ from decimal import Decimal
 from django.test import TestCase
 from django.urls import reverse
 
-from core.models import Project, Task, Timesheet, User, UserRole
+from django.utils import timezone
+
+from core.models import ProficiencyLevel, Project, Skill, Task, Timesheet, User, UserRole, UserSkill
 from tests.helpers import create_project_scenario, create_timesheet
 
 
@@ -30,8 +32,12 @@ class DashboardAndHealthViewTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "core/index.html")
-        self.assertIn("summary", response.context)
-        self.assertEqual(response.context["summary"]["active_projects"], 1)
+        # Consultor vê apenas o painel pessoal, sem indicadores financeiros da empresa.
+        self.assertNotIn("summary", response.context)
+        self.assertIn("hours_snapshot", response.context)
+        self.assertEqual(response.context["open_tasks_count"], 1)
+        self.assertNotContains(response, "chart-burn-rate")
+        self.assertContains(response, "chart-weekly-hours")
 
     def test_home_redirects_to_login_when_user_is_anonymous(self) -> None:
         response = self.client.get(reverse("core:home"))
@@ -44,6 +50,13 @@ class DashboardAndHealthViewTests(TestCase):
         response = self.client.get(reverse("core:home"))
 
         self.assertRedirects(response, reverse("core:dashboard"))
+
+    def test_login_page_does_not_expose_demo_credentials(self) -> None:
+        content = self.client.get(reverse("core:login")).content.decode("utf-8")
+
+        for secret in ("admin123", "manager123", "consultant123", "marina.pm", "caio.devops"):
+            self.assertNotIn(secret, content)
+        self.assertIn("documentação do projeto no GitHub", content)
 
     def test_login_page_renders_successfully(self) -> None:
         response = self.client.get(reverse("core:login"))
@@ -265,6 +278,66 @@ class ManagementFrontendTests(TestCase):
         self.consultant_scenario["project"].refresh_from_db()
         self.assertFalse(self.consultant_scenario["project"].is_archived)
 
+    def test_archive_offers_undo_action_in_next_page(self) -> None:
+        self.client.force_login(self.manager)
+        project = self.consultant_scenario["project"]
+
+        response = self.client.post(
+            reverse("core:project_archive", args=[project.id]),
+            data={"next": reverse("core:projects")},
+            follow=True,
+        )
+
+        restore_url = reverse("core:project_restore", args=[project.id])
+        self.assertEqual(response.context["undo_action"]["url"], restore_url)
+        self.assertContains(response, f'action="{restore_url}"')
+        self.assertContains(response, "Desfazer")
+
+        # A ação de desfazer aparece só uma vez.
+        second = self.client.get(reverse("core:projects"))
+        self.assertIsNone(second.context["undo_action"])
+
+    def test_projects_page_has_dialogs_and_archive_confirmation(self) -> None:
+        self.client.force_login(self.manager)
+
+        response = self.client.get(reverse("core:projects"))
+
+        self.assertContains(response, 'id="dialog-project-create"')
+        self.assertContains(response, 'id="dialog-task-update"')
+        self.assertContains(response, "data-confirm=")
+        self.assertContains(response, 'id="confirm-dialog"')
+        self.assertIn("task_groups", response.context)
+        row = response.context["projects_overview"][0]
+        self.assertIn(row["risk_level"], {"ok", "warning", "high"})
+
+    def test_invalid_project_form_reopens_its_dialog(self) -> None:
+        self.client.force_login(self.manager)
+
+        response = self.client.post(reverse("core:project_create"), data={"name": ""})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.context["open_dialog"], "dialog-project-create")
+        self.assertContains(response, 'data-open-dialog="dialog-project-create"')
+
+    def test_talent_bank_filters_by_skill_and_minimum_level(self) -> None:
+        skill = Skill.objects.create(name="Kubernetes")
+        UserSkill.objects.create(user=self.second_consultant, skill=skill, proficiency=ProficiencyLevel.EXPERT)
+        UserSkill.objects.create(
+            user=self.consultant_scenario["user"], skill=skill, proficiency=ProficiencyLevel.BASIC
+        )
+        self.client.force_login(self.manager)
+
+        response = self.client.get(
+            reverse("core:talent_bank"), {"skill": str(skill.id), "level": ProficiencyLevel.ADVANCED}
+        )
+
+        users = [row["user"] for row in response.context["team_overview"]]
+        self.assertEqual(users, [self.second_consultant])
+        self.assertTrue(response.context["team_overview"][0]["skill_levels"][0]["matches_filter"])
+
+        by_name = self.client.get(reverse("core:talent_bank"), {"q": "segundo.cenario"})
+        self.assertEqual([row["user"] for row in by_name.context["team_overview"]], [self.second_contract_scenario["user"]])
+
     def test_manager_can_archive_and_restore_task(self) -> None:
         self.client.force_login(self.manager)
 
@@ -344,6 +417,23 @@ class TimesheetViewTests(TestCase):
         self.assertIn("recent_entries", response.context)
         self.assertEqual(list(response.context["form"].fields["user"].queryset), [self.scenario["user"]])
         self.assertEqual(list(response.context["form"].fields["task"].queryset), [self.scenario["task"]])
+        self.assertEqual(response.context["form"].initial["date"], timezone.localdate())
+        self.assertIn("hours_snapshot", response.context)
+
+    def test_timesheet_preselects_task_from_query_string(self) -> None:
+        self.client.force_login(self.scenario["user"])
+
+        response = self.client.get(reverse("core:timesheet"), {"task": self.scenario["task"].id})
+
+        self.assertEqual(str(response.context["form"].initial["task"]), str(self.scenario["task"].id))
+
+    def test_archived_task_is_not_offered_to_consultant(self) -> None:
+        Task.objects.filter(pk=self.scenario["task"].pk).update(is_archived=True)
+        self.client.force_login(self.scenario["user"])
+
+        response = self.client.get(reverse("core:timesheet"))
+
+        self.assertEqual(list(response.context["form"].fields["task"].queryset), [])
 
     def test_timesheet_requires_authentication(self) -> None:
         response = self.client.get(reverse("core:timesheet"))

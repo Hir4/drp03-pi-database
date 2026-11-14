@@ -1,23 +1,97 @@
 {% extends "core/base.html" %}
+{% load formatting %}
 
 {% block title %}Banco de Talentos | FCN TI{% endblock %}
 
 {% block content %}
-{% include "core/components/hero.html" with eyebrow="Equipe" title="Banco de talentos da consultoria" description="Visão simples de skills, carga registrada e tarefas atribuídas à equipe técnica." compact=True %}
+{% include "core/components/hero.html" with eyebrow="Equipe" title="Banco de talentos da consultoria" description="Encontre quem tem a competência certa e está com carga disponível para assumir uma nova frente." compact=True %}
 
-<section class="card-grid team-grid">
-    {% for member in team_overview %}
-        <article class="metric-card team-card">
-            <span>{{ member.user.get_full_name|default:member.user.username }}</span>
-            <strong>{{ member.hours_worked }}h</strong>
-            <p>{{ member.assigned_tasks }} tarefa(s) atribuída(s)</p>
-            <small>{{ member.skills|join:", "|default:"Sem skills cadastradas" }}</small>
-        </article>
-    {% empty %}
-        <article class="metric-card">
-            <strong>Nenhum consultor encontrado</strong>
-            <p>Cadastre usuários com perfil de consultor para preencher o banco de talentos.</p>
-        </article>
-    {% endfor %}
+<section class="panel filter-panel">
+    {% include "core/components/panel_header.html" with eyebrow="Busca" title="Quem pode assumir esta tarefa?" %}
+    <form method="get" action="{% url 'core:talent_bank' %}" class="filter-grid" role="search" aria-label="Filtrar consultores">
+        <div class="form-field">
+            <label for="talent-q">Nome</label>
+            <input type="search" id="talent-q" name="q" class="form-control" value="{{ talent_filters.q }}" placeholder="Ex.: Julia">
+        </div>
+        <div class="form-field">
+            <label for="talent-skill">Competência</label>
+            <select id="talent-skill" name="skill" class="form-control">
+                <option value="">Todas as competências</option>
+                {% for skill in skills %}
+                    <option value="{{ skill.id }}" {% if talent_filters.skill == skill.id|stringformat:"s" %}selected{% endif %}>{{ skill.name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-field">
+            <label for="talent-level">Nível mínimo na competência</label>
+            <select id="talent-level" name="level" class="form-control" title="Vale para a competência escolhida.">
+                <option value="">Qualquer nível</option>
+                {% for value, label in proficiency_levels %}
+                    <option value="{{ value }}" {% if talent_filters.level == value %}selected{% endif %}>{{ label }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="filter-actions">
+            <button type="submit" class="small-button">Buscar</button>
+            <a href="{% url 'core:talent_bank' %}" class="secondary-link">Limpar</a>
+        </div>
+    </form>
+</section>
+
+<section class="panel" aria-labelledby="talent-results-title">
+    <div class="panel-header">
+        <div>
+            <p class="eyebrow">Resultado</p>
+            <h3 id="talent-results-title" aria-live="polite">{{ team_overview|length }} consultor{{ team_overview|length|pluralize:"es" }} encontrado{{ team_overview|length|pluralize }}</h3>
+        </div>
+    </div>
+    <p class="legend-text">
+        Ordenado de quem está mais disponível para quem está mais carregado. A carga considera as horas das últimas {{ load_weeks }} semanas
+        sobre uma capacidade de {{ load_capacity|hours:0 }} (40h por semana).
+    </p>
+
+    <ul class="talent-grid" aria-labelledby="talent-results-title">
+        {% for member in team_overview %}
+            <li class="talent-card">
+                <div class="talent-card-header">
+                    <div>
+                        <h4>{{ member.user.get_full_name|default:member.user.username }}</h4>
+                        <small class="muted-text">{{ member.user.email|default:member.user.username }}</small>
+                    </div>
+                    <span class="load-badge load-{{ member.load_level }}">{{ member.load_label }}</span>
+                </div>
+
+                <div class="talent-load">
+                    <div class="estimate-usage-text">
+                        <span>{{ member.recent_hours|hours }} nas últimas {{ load_weeks }} semanas</span>
+                        <strong>{{ member.utilization|pct:0 }}</strong>
+                    </div>
+                    <div class="progress-bar load-bar-{{ member.load_level }}" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="{{ member.utilization_bar|stringformat:'d' }}" aria-label="Carga de {{ member.user.get_full_name|default:member.user.username }}">
+                        <span style="width: {{ member.utilization_bar|stringformat:'d' }}%"></span>
+                    </div>
+                </div>
+
+                <dl class="talent-stats">
+                    <div><dt>Tarefas abertas</dt><dd>{{ member.open_tasks }}</dd></div>
+                    <div><dt>Billability recente</dt><dd>{{ member.recent_billability|pct }}</dd></div>
+                    <div><dt>Horas no histórico</dt><dd>{{ member.hours_worked|hours }}</dd></div>
+                </dl>
+
+                <ul class="skill-chips" aria-label="Competências de {{ member.user.get_full_name|default:member.user.username }}">
+                    {% for skill in member.skill_levels %}
+                        <li class="skill-chip{% if skill.matches_filter %} skill-chip-match{% endif %}">
+                            {{ skill.name }} <span class="skill-level level-{{ skill.level_code|lower }}">{{ skill.level }}</span>
+                        </li>
+                    {% empty %}
+                        <li class="skill-chip">Sem competências cadastradas</li>
+                    {% endfor %}
+                </ul>
+            </li>
+        {% empty %}
+            <li class="empty-state">
+                Nenhum consultor atende a esse filtro. Tente um nível menor ou outra competência.
+            </li>
+        {% endfor %}
+    </ul>
 </section>
 {% endblock %}

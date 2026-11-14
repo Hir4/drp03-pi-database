@@ -1,31 +1,40 @@
-"""Rotas públicas básicas do app principal."""
+"""Rotas públicas e endpoints de API do app principal."""
 
 from django.contrib.auth.views import LoginView, LogoutView
 from django.urls import path
 
+from .api import (
+    api_analytics_view,
+    api_dashboard_metrics_view,
+    api_task_request_completion_view,
+    api_timesheet_create_view,
+)
 from .views import (
+    analytics_report_view,
+    analytics_view,
     dashboard_view,
     healthcheck_view,
     home_redirect_view,
-    project_create_view,
     project_archive_view,
+    project_create_view,
     project_restore_view,
     project_update_view,
     projects_view,
-    task_create_view,
+    talent_bank_view,
     task_archive_view,
+    task_create_view,
+    task_reopen_view,
     task_request_completion_view,
     task_restore_view,
-    task_reopen_view,
     task_update_view,
     task_validate_completion_view,
-    talent_bank_view,
     timesheet_create_view,
 )
 
 app_name = "core"
 
 urlpatterns = [
+    # Rotas de navegação Web
     path("", home_redirect_view, name="home"),
     path(
         "login/",
@@ -37,6 +46,8 @@ urlpatterns = [
     ),
     path("logout/", LogoutView.as_view(), name="logout"),
     path("dashboard/", dashboard_view, name="dashboard"),
+    path("analytics/", analytics_view, name="analytics"),
+    path("analytics/report/", analytics_report_view, name="analytics_report"),
     path("projects/", projects_view, name="projects"),
     path("projects/create/", project_create_view, name="project_create"),
     path("projects/<int:project_id>/archive/", project_archive_view, name="project_archive"),
@@ -52,4 +63,14 @@ urlpatterns = [
     path("tasks/<int:task_id>/validate-completion/", task_validate_completion_view, name="task_validate_completion"),
     path("tasks/<int:task_id>/reopen/", task_reopen_view, name="task_reopen"),
     path("health/", healthcheck_view, name="healthcheck"),
+
+    # Endpoints REST API (JSON) - Projeto Integrador II
+    path("api/v1/timesheet/", api_timesheet_create_view, name="api_timesheet_create"),
+    path(
+        "api/v1/tasks/<int:task_id>/request-completion/",
+        api_task_request_completion_view,
+        name="api_task_request_completion",
+    ),
+    path("api/v1/dashboard/metrics/", api_dashboard_metrics_view, name="api_dashboard_metrics"),
+    path("api/v1/analytics/", api_analytics_view, name="api_analytics"),
 ]

@@ -1,0 +1,62 @@
+{% extends "core/base.html" %}
+
+{% block title %}Análises | FCN TI{% endblock %}
+
+{% block content %}
+<section class="panel filter-panel">
+    {% include "core/components/panel_header.html" with eyebrow="Filtros" title="Período e recorte da análise" %}
+    <form method="get" action="{% url 'core:analytics' %}" class="filter-grid">
+        <div class="form-field">
+            <label for="analytics-start">Data inicial</label>
+            <input type="date" id="analytics-start" name="start" class="form-control" value="{{ analytics_filters.start }}">
+        </div>
+        <div class="form-field">
+            <label for="analytics-end">Data final</label>
+            <input type="date" id="analytics-end" name="end" class="form-control" value="{{ analytics_filters.end }}">
+        </div>
+        <div class="form-field">
+            <label for="analytics-client">Cliente</label>
+            <select id="analytics-client" name="client" class="form-control">
+                <option value="">Todos os clientes</option>
+                {% for contract in clients %}
+                    <option value="{{ contract.id }}" {% if analytics_filters.client == contract.id|stringformat:"s" %}selected{% endif %}>{{ contract.client_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="form-field">
+            <label for="analytics-manager">Gerente</label>
+            <select id="analytics-manager" name="manager" class="form-control">
+                <option value="">Todos os gerentes</option>
+                {% for manager in managers %}
+                    <option value="{{ manager.id }}" {% if analytics_filters.manager == manager.id|stringformat:"s" %}selected{% endif %}>{{ manager.get_full_name|default:manager.username }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div class="filter-actions">
+            <button type="submit" class="small-button">Aplicar filtros</button>
+            <a href="{% url 'core:analytics' %}" class="secondary-link">Limpar</a>
+        </div>
+    </form>
+</section>
+
+<section class="analytics-toolbar" aria-label="Recorte atual e exportação">
+    <p class="analytics-scope">
+        <strong>Recorte:</strong> {{ analytics.filters.period }} · {{ analytics.filters.client }} · {{ analytics.filters.manager }}
+    </p>
+    <a class="button-link"
+       href="{% url 'core:analytics_report' %}?{% if analytics_querystring %}{{ analytics_querystring }}&amp;{% endif %}autoprint=1"
+       target="_blank" rel="noopener"
+       aria-label="Exportar relatório em PDF (abre em uma nova aba)">Exportar relatório (PDF)</a>
+</section>
+
+{% include "core/components/analytics_kpis.html" %}
+
+<div id="analytics-root" data-api-url="{{ analytics_api_url }}">
+    {% include "core/components/analytics_sections.html" with print_mode=False %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="/static/js/chart.umd.min.js"></script>
+<script src="/static/js/analytics-charts.js?v=1.4"></script>
+{% endblock %}

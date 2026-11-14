@@ -11,6 +11,7 @@ def get_env_list(name: str, default: str) -> list[str]:
 
     return [item.strip() for item in os.getenv(name, default).split(",") if item.strip()]
 
+
 SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-fcn-ti-dev-key")
 DEBUG = os.getenv("DEBUG", "1") == "1"
 ALLOWED_HOSTS = get_env_list("ALLOWED_HOSTS", "localhost,127.0.0.1,0.0.0.0")
@@ -84,6 +85,18 @@ USE_TZ = True
 STATIC_URL = "static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 STATICFILES_DIRS = [BASE_DIR / "static"]
+
+# Configurações de Proxy Reverso e HTTPS
+SECURE_PROXY_SSL_HEADER = ("HTTP_X_FORWARDED_PROTO", "https")
+USE_X_FORWARDED_HOST = True
+USE_X_FORWARDED_PORT = True
+
+USE_HTTPS = os.getenv("USE_HTTPS", "0") == "1"
+if USE_HTTPS:
+    SESSION_COOKIE_SECURE = True
+    CSRF_COOKIE_SECURE = True
+    SECURE_BROWSER_XSS_FILTER = True
+    SECURE_CONTENT_TYPE_NOSNIFF = True
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 AUTH_USER_MODEL = "core.User"

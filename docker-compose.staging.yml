@@ -1,0 +1,83 @@
+services:
+  db:
+    image: postgres:15-alpine
+    container_name: fcn_staging_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${DB_USER:-fcn_staging_admin}
+      POSTGRES_PASSWORD: ${DB_PASS:-fcn_staging_secret_change_me}
+      POSTGRES_DB: ${DB_NAME:-fcn_staging_db}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-fcn_staging_admin} -d ${DB_NAME:-fcn_staging_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    # Seguranca: Porta 5432 NAO e exposta externamente na VPS
+    volumes:
+      - pgdata_staging:/var/lib/postgresql/data
+    networks:
+      - backend_net
+
+  backend:
+    build: ./backend
+    container_name: fcn_staging_backend
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DEBUG: ${DEBUG:-0}
+      SECRET_KEY: ${SECRET_KEY}
+      ALLOWED_HOSTS: ${ALLOWED_HOSTS}
+      CSRF_TRUSTED_ORIGINS: ${CSRF_TRUSTED_ORIGINS}
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: ${DB_NAME:-fcn_staging_db}
+      DB_USER: ${DB_USER:-fcn_staging_admin}
+      DB_PASS: ${DB_PASS:-fcn_staging_secret_change_me}
+      DJANGO_SERVER_MODE: gunicorn
+      GUNICORN_WORKERS: ${GUNICORN_WORKERS:-3}
+      COLLECT_STATIC: "1"
+      SEED_DEMO_DATA: "1"
+      USE_HTTPS: ${USE_HTTPS:-0}
+    volumes:
+      - staticfiles_staging:/app/staticfiles
+    networks:
+      - backend_net
+      - frontend_net
+
+  nginx:
+    build: ./nginx
+    container_name: fcn_staging_nginx
+    restart: unless-stopped
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+    volumes:
+      - staticfiles_staging:/var/www/staticfiles:ro
+      - certbot_www:/var/www/certbot:ro
+      - certbot_conf:/etc/letsencrypt:ro
+    depends_on:
+      - backend
+    networks:
+      - frontend_net
+
+  certbot:
+    image: certbot/certbot:latest
+    container_name: fcn_staging_certbot
+    restart: unless-stopped
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+    volumes:
+      - certbot_www:/var/www/certbot:rw
+      - certbot_conf:/etc/letsencrypt:rw
+
+volumes:
+  pgdata_staging:
+  staticfiles_staging:
+  certbot_www:
+  certbot_conf:
+
+networks:
+  backend_net:
+    internal: true
+  frontend_net:

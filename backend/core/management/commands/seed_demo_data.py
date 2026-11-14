@@ -1,13 +1,15 @@
 from __future__ import annotations
 
 from collections.abc import Iterable
-from datetime import date, datetime
+from datetime import date
 from decimal import Decimal
 
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 
 from core.models import Contract, ContractType, ProficiencyLevel, Project, Skill, Task, Timesheet, User, UserRole, UserSkill
+
+from ._demo_history import EXTRA_TASKS, WORKFLOW_STATES, build_generated_entries
 
 UserMap = dict[str, User]
 SkillMap = dict[str, Skill]
@@ -123,6 +125,33 @@ class Command(BaseCommand):
                 hourly_cost=Decimal("98.00"),
                 is_active=False,
             ),
+            "thiago": self._upsert_user(
+                username="thiago.cloud",
+                password="consultant123",
+                first_name="Thiago",
+                last_name="Rocha",
+                email="thiago@fcnti.com.br",
+                role=UserRole.CONSULTANT,
+                hourly_cost=Decimal("102.00"),
+            ),
+            "aline": self._upsert_user(
+                username="aline.ux",
+                password="consultant123",
+                first_name="Aline",
+                last_name="Barros",
+                email="aline@fcnti.com.br",
+                role=UserRole.CONSULTANT,
+                hourly_cost=Decimal("92.00"),
+            ),
+            "pedro": self._upsert_user(
+                username="pedro.jr",
+                password="consultant123",
+                first_name="Pedro",
+                last_name="Santos",
+                email="pedro@fcnti.com.br",
+                role=UserRole.CONSULTANT,
+                hourly_cost=Decimal("65.00"),
+            ),
         }
 
     def _upsert_user(self, *, username: str, password: str, **defaults) -> User:
@@ -169,6 +198,14 @@ class Command(BaseCommand):
                 name="Cybersecurity",
                 description="Práticas de segurança aplicadas à infraestrutura e aplicações",
             ),
+            "cloud": self._get_or_create_skill(
+                name="Cloud Computing",
+                description="Arquitetura, migração e operação em nuvem pública",
+            ),
+            "ux": self._get_or_create_skill(
+                name="UX/UI Design",
+                description="Pesquisa com usuários, prototipação e design de interfaces acessíveis",
+            ),
         }
 
     def _get_or_create_skill(self, *, name: str, description: str) -> Skill:
@@ -198,6 +235,16 @@ class Command(BaseCommand):
             (users["larissa"], skills["data_engineering"], ProficiencyLevel.ADVANCED),
             (users["felipe"], skills["django"], ProficiencyLevel.INTERMEDIATE),
             (users["felipe"], skills["postgresql"], ProficiencyLevel.BASIC),
+            (users["thiago"], skills["cloud"], ProficiencyLevel.EXPERT),
+            (users["thiago"], skills["devops"], ProficiencyLevel.ADVANCED),
+            (users["thiago"], skills["security"], ProficiencyLevel.BASIC),
+            (users["caio"], skills["cloud"], ProficiencyLevel.ADVANCED),
+            (users["aline"], skills["ux"], ProficiencyLevel.EXPERT),
+            (users["aline"], skills["react"], ProficiencyLevel.ADVANCED),
+            (users["renata"], skills["ux"], ProficiencyLevel.BASIC),
+            (users["pedro"], skills["django"], ProficiencyLevel.BASIC),
+            (users["pedro"], skills["postgresql"], ProficiencyLevel.INTERMEDIATE),
+            (users["pedro"], skills["data_engineering"], ProficiencyLevel.BASIC),
         )
         for user, skill, proficiency in links:
             UserSkill.objects.update_or_create(
@@ -256,8 +303,17 @@ class Command(BaseCommand):
             end_date=date(2026, 2, 28),
             is_active=False,
         )
+        vale_verde = self._upsert_contract(
+            client_name="Cooperativa Vale Verde",
+            contract_type=ContractType.TIME_AND_MATERIALS,
+            value=Decimal("90000.00"),
+            start_date=date(2026, 9, 1),
+            end_date=None,
+            is_active=True,
+        )
 
         return {
+            "migracao_nuvem": self._get_or_create_project(vale_verde, "Migração para Nuvem", Decimal("90000.00")),
             "sustentacao_erp": self._get_or_create_project(atlas, "Sustentação ERP", Decimal("70000.00")),
             "modernizacao_dados": self._get_or_create_project(atlas, "Modernização de Dados", Decimal("50000.00")),
             "rollout_sap": self._get_or_create_project(atlas, "Rollout SAP Financeiro", Decimal("5000.00")),
@@ -313,19 +369,36 @@ class Command(BaseCommand):
 
     def _project_manager_for(self, project_name: str) -> User:
         manager_username = "marina.pm"
-        if project_name in {"Observabilidade Operacional", "Portal B2B", "Implantação CRM Omnichannel"}:
+        if project_name in {
+            "Observabilidade Operacional",
+            "Portal B2B",
+            "Implantação CRM Omnichannel",
+            "Migração para Nuvem",
+        }:
             manager_username = "rodrigo.ops"
         return User.objects.get(username=manager_username)
 
     def _create_tasks(self, projects: ProjectMap, users: UserMap) -> TaskMap:
-        """Cria as tarefas base que alimentam o registro de horas e os indicadores."""
+        """Cria as tarefas base e as do histórico ampliado (``_demo_history``)."""
+        tasks = self._create_base_tasks(projects, users)
+        for extra in EXTRA_TASKS:
+            tasks[extra.key] = self._get_or_create_task(
+                project=projects[extra.project],
+                name=extra.name,
+                estimated_hours=Decimal(extra.estimated_hours),
+                assigned_to=users[extra.assignee] if extra.assignee else None,
+                is_completed=False,
+            )
+        return tasks
+
+    def _create_base_tasks(self, projects: ProjectMap, users: UserMap) -> TaskMap:
         return {
             "task_1": self._get_or_create_task(
                 project=projects["sustentacao_erp"],
                 name="Mapeamento de incidentes críticos",
                 estimated_hours=Decimal("40.00"),
                 assigned_to=users["marina"],
-                is_completed=True,
+                is_completed=False,
             ),
             "task_2": self._get_or_create_task(
                 project=projects["sustentacao_erp"],
@@ -504,28 +577,46 @@ class Command(BaseCommand):
             ("felipe", "task_9", date(2026, 1, 22), "6.00", False, "Tentativa de conciliação de clientes duplicados antes do cancelamento"),
         ]
 
-        for username, task_key, entry_date, hours_worked, is_billable, description in entries:
+        all_entries = [
+            (username, task_key, entry_date, Decimal(hours), is_billable, description)
+            for username, task_key, entry_date, hours, is_billable, description in entries
+        ]
+        all_entries.extend(build_generated_entries(entries))
+
+        for username, task_key, entry_date, hours_worked, is_billable, description in all_entries:
             Timesheet.objects.update_or_create(
                 user=users[username],
                 task=tasks[task_key],
                 date=entry_date,
                 defaults={
-                    "hours_worked": Decimal(hours_worked),
+                    "hours_worked": hours_worked,
                     "is_billable": is_billable,
                     "description": description,
                 },
             )
 
     def _apply_task_workflow_states(self, tasks: TaskMap, users: UserMap) -> None:
-        """Configura alguns estados operacionais para demonstrar o fluxo de validação."""
+        """Aplica o fluxo de validação com datas fixas de pedido e aprovação.
 
-        tasks["task_1"].validate_completion(validated_by=users["marina"])
-        tasks["task_5"].validate_completion(validated_by=users["rodrigo"])
-        tasks["task_4b"].request_completion(requested_by=users["renata"])
-        tasks["task_7"].request_completion(requested_by=users["larissa"])
-        tasks["task_4b"].completion_requested_at = timezone.make_aware(datetime(2026, 5, 8, 14, 30))
-        tasks["task_4b"].save(update_fields=("completion_requested_at",))
-        tasks["task_7"].completion_requested_at = timezone.make_aware(datetime(2026, 5, 9, 10, 15))
-        tasks["task_7"].save(update_fields=("completion_requested_at",))
+        Os campos são gravados diretamente (sem ``timezone.now()``) para que o
+        tempo médio de validação e a fila pendente sejam sempre os mesmos.
+        """
+
+        for state in WORKFLOW_STATES:
+            task = tasks[state.task]
+            task.completion_requested_by = users[state.requested_by]
+            task.completion_requested_at = timezone.make_aware(state.requested_at)
+            task.is_completed = state.validated_at is not None
+            task.completion_validated_by = users[state.validated_by] if state.validated_by else None
+            task.completion_validated_at = timezone.make_aware(state.validated_at) if state.validated_at else None
+            task.save(
+                update_fields=(
+                    "is_completed",
+                    "completion_requested_by",
+                    "completion_requested_at",
+                    "completion_validated_by",
+                    "completion_validated_at",
+                )
+            )
         tasks["task_9"].project.archive()
         tasks["task_8b"].archive()
